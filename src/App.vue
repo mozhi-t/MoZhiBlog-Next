@@ -1,47 +1,83 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { onMounted } from 'vue'
+import { useThemeStore } from './stores/theme'
+import { useReadingStore } from './stores/reading'
+import NavHeader from './components/common/NavHeader.vue'
+import SiteFooter from './components/common/SiteFooter.vue'
+import ReadingTools from './components/common/ReadingTools.vue'
+
+const themeStore = useThemeStore()
+const readingStore = useReadingStore()
+
+// Initialize stores on mount
+onMounted(() => {
+  themeStore.initTheme()
+  readingStore.initFontSize()
+})
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+  <div class="app-wrapper">
+    <!-- Navigation -->
+    <NavHeader />
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
+    <!-- Main Content -->
+    <main class="main-content">
+      <router-view v-slot="{ Component }">
+        <Transition name="slide" mode="out-in">
+          <component :is="Component" />
+        </Transition>
+      </router-view>
+    </main>
 
-  <main>
-    <TheWelcome />
-  </main>
+    <!-- Footer -->
+    <SiteFooter />
+
+    <!-- Reading Tools -->
+    <ReadingTools />
+  </div>
 </template>
 
-<style scoped>
-header {
-  line-height: 1.5;
+<style lang="scss">
+/* ============================================
+   App Wrapper
+   ============================================ */
+.app-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+.main-content {
+  flex: 1;
+  width: 100%;
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
+/* Page Transition Animation */
+/* PC端左右滑动 */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.slide-enter-from {
+  transform: translateX(30px);
+  opacity: 0;
+}
+
+.slide-leave-to {
+  transform: translateX(-30px);
+  opacity: 0;
+}
+
+/* 移动端上下滑动 */
+@media (max-width: 768px) {
+  .slide-enter-from {
+    transform: translateY(20px);
   }
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
+  .slide-leave-to {
+    transform: translateY(-20px);
   }
 }
 </style>
