@@ -1,5 +1,5 @@
 <template>
-  <div class="article-page">
+  <div class="article-page" v-if="!loading && !notFound">
     <!-- Article Header -->
     <header class="article-header">
       <div class="header-meta">
@@ -9,8 +9,8 @@
         <span class="publish-date">{{ formatDate(article.date) }}</span>
       </div>
       <h1 class="article-title">{{ article.title }}</h1>
-      <div class="article-tags">
-        <span v-for="tag in article.tags" :key="tag" class="tag">{{ tag }}</span>
+      <div class="article-tags" v-if="article.tag">
+        <span class="tag">#{{ article.tag.name }}</span>
       </div>
     </header>
 
@@ -35,76 +35,83 @@
 
       <!-- Main Content -->
       <div class="content-body" ref="contentRef">
-        <p class="intro">{{ article.excerpt }}</p>
+        <p class="intro" v-if="article.excerpt">{{ article.excerpt }}</p>
 
-        <h2 id="section-1">开始之前</h2>
-        <p>
-          在现代前端开发中，用户体验已经成为了一个不可或缺的部分。一个好的用户体验不仅仅是功能的实现，更是细节的体现。苹果公司作为全球最具影响力的科技公司之一，其设计哲学一直为业界所称道。
-        </p>
-        <p>
-          极简主义设计并不意味着简陋，而是通过精心的设计，让每一个元素都有其存在的意义。在这篇文章中，我们将探讨如何在前端项目中实现这种设计理念。
-        </p>
-
-        <h2 id="section-2">核心设计原则</h2>
-        <p>
-          <strong>留白</strong>是极简设计的核心之一。适当的留白可以让页面看起来更加清爽，也让用户能够更专注于内容本身。
-        </p>
-
-        <h3 id="section-2-1">色彩运用</h3>
-        <p>
-          在色彩选择上，我们应该遵循「少即是多」的原则。使用低饱和度的颜色可以让页面看起来更加高级，同时也能减少视觉疲劳。
-        </p>
-
-        <figure class="article-image">
-          <img
-            src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200"
-            alt="代码示例"
-            loading="lazy"
-            @load="imageLoaded = true"
-            :class="{ loaded: imageLoaded }"
-          />
-          <figcaption>优雅的代码编辑器界面</figcaption>
-        </figure>
-
-        <h2 id="section-3">动效设计</h2>
-        <p>
-          细腻的动效可以提升用户体验，但要注意动效不应该过于夸张。一个好的动效应该是自然、流畅的，让用户感受到流畅而不是干扰。
-        </p>
-
-        <blockquote>
-          <p>「设计不仅仅是外观和感觉。设计是关于它如何运作的。」—— 史蒂夫·乔布斯</p>
-        </blockquote>
-
-        <h2 id="section-4">总结</h2>
-        <p>
-          通过这篇文章，我们了解了极简设计的核心原则，以及如何在前端项目中实现这些原则。希望这些内容能够帮助你在未来的项目中创造出更好的用户体验。
-        </p>
+        <!-- 渲染Markdown内容 -->
+        <div v-html="renderedContent"></div>
       </div>
     </article>
 
-    <!-- Related Articles -->
-    <section class="related-articles">
-      <h3 class="related-title">相关文章</h3>
-      <div class="related-grid">
-        <router-link
-          v-for="related in relatedArticles"
-          :key="related.id"
-          :to="`/article/${related.id}`"
-          class="related-card"
-        >
-          <h4>{{ related.title }}</h4>
-          <span class="related-date">{{ formatDate(related.date) }}</span>
-        </router-link>
+    <!-- Comments Section -->
+    <section class="comments-section">
+      <h3 class="comments-title">评论</h3>
+
+      <!-- Comment Form -->
+      <div class="comment-form">
+        <div class="form-row">
+          <input
+            v-model="commentForm.nickname"
+            type="text"
+            placeholder="昵称 *"
+            class="comment-input"
+          />
+          <input
+            v-model="commentForm.email"
+            type="email"
+            placeholder="邮箱（选填）"
+            class="comment-input"
+          />
+        </div>
+        <textarea
+          v-model="commentForm.content"
+          placeholder="写下你的评论... *"
+          class="comment-textarea"
+          rows="4"
+        ></textarea>
+        <div class="form-footer">
+          <span v-if="commentError" class="error-text">{{ commentError }}</span>
+          <button class="submit-btn" @click="submitComment" :disabled="submitting">
+            {{ submitting ? '提交中...' : '提交评论' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Comments List -->
+      <div class="comments-list">
+        <div v-for="comment in comments" :key="comment.id" class="comment-item">
+          <div class="comment-header">
+            <span class="comment-author">{{ comment.nickname }}</span>
+            <span class="comment-time">{{ formatDate(comment.date) }}</span>
+          </div>
+          <p class="comment-content">{{ comment.content }}</p>
+        </div>
+        <div v-if="comments.length === 0" class="no-comments">
+          暂无评论，快来抢沙发吧~
+        </div>
       </div>
     </section>
+  </div>
+
+  <!-- Loading State -->
+  <div v-else-if="loading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p>加载中...</p>
+  </div>
+
+  <!-- Not Found State -->
+  <div v-else class="not-found-state">
+    <h2>文章不存在</h2>
+    <router-link to="/" class="back-home">返回首页</router-link>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { marked } from 'marked'
 import { useReadingStore } from '../stores/reading'
 import { useActiveAnchor, useScrollObserver } from '../composables/useObserver'
+import { articlesApi, commentsApi } from '../api/frontend'
 
 const route = useRoute()
 const readingStore = useReadingStore()
@@ -112,31 +119,102 @@ const readingStore = useReadingStore()
 // Font size
 const fontSize = computed(() => readingStore.currentFontSize)
 
-// Mock article data
+// 加载状态
+const loading = ref(true)
+const notFound = ref(false)
+
+// 文章数据
 const article = ref({
   id: route.params.id,
-  title: '探索 Vue 3 Composition API 的最佳实践',
-  excerpt: '深入理解 Vue 3 的 Composition API，学习如何编写更清晰、可维护的组件代码。',
-  date: '2024-01-15',
-  category: '技术',
-  categorySlug: 'tech',
-  tags: ['Vue', 'JavaScript', '前端']
+  title: '',
+  excerpt: '',
+  date: '',
+  category: '',
+  categorySlug: '',
+  tag: null,
+  content: ''
 })
 
-// Table of Contents
-const toc = ref([
-  { id: 'section-1', text: '开始之前' },
-  { id: 'section-2', text: '核心设计原则' },
-  { id: 'section-2-1', text: '色彩运用' },
-  { id: 'section-3', text: '动效设计' },
-  { id: 'section-4', text: '总结' }
-])
+// 从API加载文章
+const loadArticle = async () => {
+  try {
+    loading.value = true
+    notFound.value = false
+    const id = route.params.id
+
+    const res = await articlesApi.detail(id)
+    const data = res.data
+
+    article.value = {
+      id: data.id,
+      title: data.title,
+      excerpt: data.summary || '',
+      date: data.create_time,
+      category: data.category?.name || '',
+      categorySlug: data.category?.name || '',
+      tag: data.tag || null,
+      content: data.content
+    }
+
+    // 加载评论
+    loadComments()
+  } catch (error) {
+    console.error('加载文章失败:', error)
+    notFound.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+// 评论数据
+const comments = ref([])
+
+// 加载评论
+const loadComments = async () => {
+  try {
+    const res = await commentsApi.list(route.params.id)
+    comments.value = res.data.map(c => ({
+      id: c.id,
+      nickname: c.nickname,
+      content: c.content,
+      date: c.create_time
+    }))
+  } catch (error) {
+    console.error('加载评论失败:', error)
+  }
+}
+
+// Table of Contents - 从Markdown解析
+const toc = computed(() => {
+  if (!article.value.content) return []
+  const headings = []
+  const lines = article.value.content.split('\n')
+  let currentLevel = 0
+
+  lines.forEach(line => {
+    const match = line.match(/^(#{1,3})\s+(.+)$/)
+    if (match) {
+      const level = match[1].length
+      const text = match[2]
+      const id = text.toLowerCase().replace(/[^\u4e00-\u9fa5a-z0-9]+/g, '-')
+      headings.push({ id, text, level })
+    }
+  })
+
+  return headings
+})
+
+// 渲染Markdown内容
+const renderedContent = computed(() => {
+  if (!article.value.content) return ''
+  return marked(article.value.content)
+})
 
 // Image lazy loading
 const imageLoaded = ref(false)
 
 // Active anchor tracking
-const { activeAnchor } = useActiveAnchor(toc.value.map(t => t.id))
+const activeAnchor = ref('')
 
 // Scroll to anchor
 const scrollToAnchor = (id) => {
@@ -148,14 +226,9 @@ const scrollToAnchor = (id) => {
   }
 }
 
-// Related articles
-const relatedArticles = ref([
-  { id: 2, title: 'TypeScript 类型系统详解', date: '2023-12-28' },
-  { id: 4, title: 'CSS Grid 布局完全指南', date: '2023-12-15' }
-])
-
 // Format date
 const formatDate = (date) => {
+  if (!date) return ''
   return new Date(date).toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: 'long',
@@ -163,22 +236,47 @@ const formatDate = (date) => {
   })
 }
 
-// Paragraph animation on mount
-const contentRef = ref(null)
-onMounted(() => {
-  const paragraphs = contentRef.value?.querySelectorAll('p, h2, h3, blockquote, figure')
-  if (paragraphs) {
-    paragraphs.forEach((p, index) => {
-      p.style.opacity = '0'
-      p.style.transform = 'translateY(10px)'
-      p.style.transition = 'opacity 0.3s ease, transform 0.3s ease'
+// 评论提交
+const commentForm = ref({
+  nickname: '',
+  email: '',
+  content: ''
+})
+const submitting = ref(false)
+const commentError = ref('')
 
-      setTimeout(() => {
-        p.style.opacity = '1'
-        p.style.transform = 'translateY(0)'
-      }, 100 + index * 80)
-    })
+const submitComment = async () => {
+  if (!commentForm.value.nickname || !commentForm.value.content) {
+    commentError.value = '请填写昵称和评论内容'
+    return
   }
+
+  try {
+    submitting.value = true
+    commentError.value = ''
+    await commentsApi.create({
+      article_id: parseInt(route.params.id),
+      ...commentForm.value
+    })
+    // 清空表单
+    commentForm.value = { nickname: '', email: '', content: '' }
+    // 重新加载评论
+    loadComments()
+  } catch (error) {
+    console.error('提交评论失败:', error)
+    commentError.value = '评论发表失败，请稍后重试'
+  } finally {
+    submitting.value = false
+  }
+}
+
+// Watch route changes
+watch(() => route.params.id, () => {
+  loadArticle()
+})
+
+onMounted(() => {
+  loadArticle()
 })
 </script>
 
@@ -453,6 +551,195 @@ onMounted(() => {
 
   .related-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Comments Section */
+.comments-section {
+  margin-top: var(--spacing-3xl);
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--color-divider);
+}
+
+.comments-title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  margin-bottom: var(--spacing-lg);
+}
+
+.comment-form {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.comment-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color var(--transition-base);
+
+  &::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  &:focus {
+    border-color: var(--color-accent);
+  }
+}
+
+.comment-textarea {
+  width: 100%;
+  padding: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  resize: vertical;
+  transition: border-color var(--transition-base);
+
+  &::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  &:focus {
+    border-color: var(--color-accent);
+  }
+}
+
+.form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--spacing-md);
+}
+
+.error-text {
+  color: #ff3b30;
+  font-size: var(--font-size-sm);
+}
+
+.submit-btn {
+  padding: var(--spacing-sm) var(--spacing-xl);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #fff;
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.comment-item {
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.comment-author {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.comment-time {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.comment-content {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.no-comments {
+  text-align: center;
+  color: var(--color-text-tertiary);
+  padding: var(--spacing-xl);
+}
+
+/* Loading & Not Found States */
+.loading-state,
+.not-found-state {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--spacing-md);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.not-found-state h2 {
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-lg);
+}
+
+.back-home {
+  color: var(--color-accent);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
   }
 }
 </style>

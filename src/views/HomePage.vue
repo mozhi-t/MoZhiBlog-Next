@@ -46,6 +46,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import ArticleCard from '../components/common/ArticleCard.vue'
+import { articlesApi } from '../api/frontend'
 
 const subtitles = [
   '远方很远，步履不停，未来可期',
@@ -56,15 +57,39 @@ const currentSubtitleIndex = ref(0)
 const currentSubtitle = ref(subtitles[0])
 const isAnimating = ref(false)
 const showSubtitle = ref(true)
+const loading = ref(true)
 let timer = null
 
 const currentChars = computed(() => currentSubtitle.value.split(''))
+
+// 文章列表
+const articles = ref([])
+
+// 加载文章列表
+const loadArticles = async () => {
+  try {
+    loading.value = true
+    const res = await articlesApi.list({ page: 1, size: 20 })
+    articles.value = res.data.items.map(item => ({
+      id: item.id,
+      title: item.title,
+      excerpt: item.summary || '',
+      date: new Date(item.create_time).toLocaleDateString('zh-CN'),
+      category: item.category?.name || '',
+      tag: item.tag || null
+    }))
+  } catch (error) {
+    console.error('加载文章失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
 
 const startAnimation = () => {
   if (isAnimating.value) return
   isAnimating.value = true
 
-  // 根据文字长度计算显示时间（每个字符0.08s + 额外2s）
+  // 根据文字长度计算显示时间
   const displayTime = currentSubtitle.value.length * 100 + 4000
 
   timer = setTimeout(() => {
@@ -86,66 +111,11 @@ const startAnimation = () => {
 
 onMounted(() => {
   startAnimation()
+  loadArticles()
 })
 
 onUnmounted(() => {
   if (timer) clearTimeout(timer)
-})
-
-// Mock Data - 模拟数据
-const articles = ref([
-  {
-    id: 1,
-    title: '探索 Vue 3 Composition API 的最佳实践',
-    excerpt: '深入理解 Vue 3 的 Composition API，学习如何编写更清晰、可维护的组件代码。',
-    date: '2025/4/6',
-    category: '技术',
-    tags: ['RAG', 'LLM', '生成式 AI', '检索增强生成']
-  },
-  {
-    id: 2,
-    title: '设计系统的美学：从苹果设计哲学学到的',
-    excerpt: '分析苹果设计系统的核心原则，探讨如何打造简洁优雅的用户界面。',
-    date: '2025/4/1',
-    category: '设计',
-    tags: ['UI', 'UX', '设计系统']
-  },
-  {
-    id: 3,
-    title: '在忙碌的生活中寻找平衡',
-    excerpt: '分享一些关于时间管理、心态调整的思考与实践。',
-    date: '2025/3/25',
-    category: '生活',
-    tags: ['生活', '自我成长']
-  },
-  {
-    id: 4,
-    title: 'TypeScript 类型系统详解',
-    excerpt: '全面解析 TypeScript 的高级类型特性，提升代码类型安全。',
-    date: '2025/3/18',
-    category: '技术',
-    tags: ['TypeScript', '前端']
-  },
-  {
-    id: 5,
-    title: '极简主义：少即是多',
-    excerpt: '探讨极简主义生活方式带来的内心平静与效率提升。',
-    date: '2025/3/10',
-    category: '随笔',
-    tags: ['极简主义', '生活方式']
-  },
-  {
-    id: 6,
-    title: 'CSS Grid 布局完全指南',
-    excerpt: '掌握现代 CSS Grid 布局，创建复杂的响应式网页结构。',
-    date: '2025/3/5',
-    category: '技术',
-    tags: ['CSS', 'Grid', '布局']
-  }
-])
-
-onMounted(() => {
-  // 可以在这里从API获取数据
 })
 </script>
 

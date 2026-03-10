@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install bcrypt==4.0.1)"
+    ]
+  }
+}

@@ -4,6 +4,9 @@
  */
 import { createRouter, createWebHistory } from 'vue-router'
 
+// 导入后台路由
+import adminRouter from './admin'
+
 const routes = [
   {
     path: '/',
@@ -18,10 +21,16 @@ const routes = [
     meta: { title: '文章详情' }
   },
   {
-    path: '/category/:slug',
+    path: '/category',
     name: 'Category',
     component: () => import('../views/CategoryPage.vue'),
     meta: { title: '分类' }
+  },
+  {
+    path: '/tag',
+    name: 'Tag',
+    component: () => import('../views/TagPage.vue'),
+    meta: { title: '标签' }
   },
   {
     path: '/archive',
@@ -49,9 +58,12 @@ const routes = [
   }
 ]
 
+// 合并路由
+const allRoutes = [...routes, ...adminRouter.options.routes]
+
 const router = createRouter({
   history: createWebHistory(),
-  routes,
+  routes: allRoutes,
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
       return savedPosition
@@ -69,7 +81,7 @@ const router = createRouter({
   }
 })
 
-// 路由标题更新
+// 路由守卫
 router.beforeEach((to, from, next) => {
   document.title = `${to.meta.title || '首页'} | MoZhi Blog`
   next()

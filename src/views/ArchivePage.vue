@@ -6,8 +6,13 @@
       <p class="page-description">时光流转，文字永存</p>
     </header>
 
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <div class="loading-spinner"></div>
+    </div>
+
     <!-- Timeline -->
-    <div class="timeline">
+    <div v-else class="timeline">
       <div
         v-for="(yearGroup, year) in archiveData"
         :key="year"
@@ -41,33 +46,64 @@
           </ul>
         </Transition>
       </div>
+
+      <div v-if="Object.keys(archiveData).length === 0" class="empty-tip">
+        暂无文章
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { articlesApi } from '../api/frontend'
 
-// Mock archive data
-const archiveData = {
-  '2024': [
-    { id: 1, title: '探索 Vue 3 Composition API 的最佳实践', date: '01-15' },
-    { id: 2, title: '设计系统的美学：从苹果设计哲学学到的', date: '01-10' },
-    { id: 3, title: '在忙碌的生活中寻找平衡', date: '01-05' }
-  ],
-  '2023': [
-    { id: 4, title: 'TypeScript 类型系统详解', date: '12-28' },
-    { id: 5, title: '极简主义：少即是多', date: '12-20' },
-    { id: 6, title: 'CSS Grid 布局完全指南', date: '12-15' },
-    { id: 7, title: 'JavaScript 异步编程完全指南', date: '11-28' },
-    { id: 8, title: 'React Hooks 最佳实践', date: '11-10' }
-  ],
-  '2022': [
-    { id: 9, title: 'Node.js 性能优化实战', date: '12-25' },
-    { id: 10, title: '微服务架构设计模式', date: '11-15' },
-    { id: 11, title: 'Docker 容器化部署指南', date: '10-20' }
-  ]
+// 加载状态
+const loading = ref(true)
+
+// 文章归档数据
+const articles = ref([])
+
+// 从API加载数据
+const loadArticles = async () => {
+  try {
+    loading.value = true
+    // 获取所有文章（分页获取较多数据）
+    const res = await articlesApi.list({ page: 1, size: 100 })
+    articles.value = res.data.items.map(item => ({
+      id: item.id,
+      title: item.title,
+      date: new Date(item.create_time)
+    }))
+  } catch (error) {
+    console.error('加载文章失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
+
+// 按年份分组
+const archiveData = computed(() => {
+  const groups = {}
+  articles.value.forEach(article => {
+    const year = article.date.getFullYear().toString()
+    const monthDay = `${String(article.date.getMonth() + 1).padStart(2, '0')}-${String(article.date.getDate()).padStart(2, '0')}`
+    if (!groups[year]) {
+      groups[year] = []
+    }
+    groups[year].push({
+      id: article.id,
+      title: article.title,
+      date: monthDay
+    })
+  })
+  // 按年份降序排列
+  const sortedGroups = {}
+  Object.keys(groups).sort((a, b) => b - a).forEach(key => {
+    sortedGroups[key] = groups[key]
+  })
+  return sortedGroups
+})
 
 // Expanded years state
 const expandedYears = ref(['2024'])
@@ -81,6 +117,13 @@ const toggleYear = (year) => {
     expandedYears.value.push(year)
   }
 }
+
+onMounted(() => {
+  loadArticles().then(() => {
+    // 加载完成后展开所有年份
+    expandedYears.value = Object.keys(archiveData.value)
+  })
+})
 </script>
 
 <style lang="scss" scoped>
@@ -264,5 +307,33 @@ const toggleYear = (year) => {
   .timeline {
     padding-left: var(--spacing-md);
   }
+}
+
+/* Loading & Empty States */
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-3xl);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty-tip {
+  text-align: center;
+  color: var(--color-text-tertiary);
+  padding: var(--spacing-3xl);
 }
 </style>

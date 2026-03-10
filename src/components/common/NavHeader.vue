@@ -20,7 +20,7 @@
 
           <!-- Dropdown Menu -->
           <div v-else class="nav-dropdown">
-            <span class="nav-link dropdown-trigger">
+            <span class="nav-link dropdown-trigger" :title="item.tooltip">
               {{ item.name }}
               <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M6 9l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -101,11 +101,15 @@ const toggleTheme = () => themeStore.toggleTheme()
 // Navigation Items
 const navItems = [
   { name: '首页', path: '/' },
-  { name: '分类', path: '/category', children: [
-    { name: '技术', path: '/category/tech' },
-    { name: '生活', path: '/category/life' },
-    { name: '随笔', path: '/category/essay' }
-  ]},
+  {
+    name: '文章',
+    path: '/article',
+    tooltip: '分类、标签、归档',
+    children: [
+      { name: '分类', path: '/category' },
+      { name: '标签', path: '/tag' }
+    ]
+  },
   { name: '归档', path: '/archive' },
   { name: '友链', path: '/links' },
   { name: '关于', path: '/about' }
