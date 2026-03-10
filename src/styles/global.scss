@@ -10,6 +10,17 @@
  */
 
 /* ============================================
+   Font Face - 自定义字体
+   ============================================ */
+@font-face {
+  font-family: 'Ziti';
+  src: url('@/assets/fonts/ziti.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================
    CSS Variables - Theme System
    ============================================ */
 :root {
@@ -62,7 +73,7 @@
   --radius-full: 9999px;
 
   /* Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-family: 'Ziti', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-size-xs: 12px;
   --font-size-sm: 14px;
   --font-size-base: 16px;
@@ -84,7 +95,7 @@
   --transition-slow: 0.4s ease-out;
 
   /* Layout */
-  --content-max-width: 900px;
+  --content-max-width: 1250px;
   --nav-width: 80%;
   --nav-height: 60px;
   --nav-height-scrolled: 50px;

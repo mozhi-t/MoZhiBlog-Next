@@ -1,21 +1,31 @@
 <template>
   <article
+    ref="targetRef"
     class="article-card"
     :class="{ visible: isVisible }"
     @click="goToArticle"
   >
-    <div class="card-image" v-if="article.cover">
-      <img :src="article.cover" :alt="article.title" loading="lazy" />
-    </div>
     <div class="card-content">
-      <div class="card-meta">
-        <span class="category" v-if="article.category">{{ article.category }}</span>
-        <span class="date">{{ formatDate(article.date) }}</span>
+      <!-- 分类小标签 -->
+      <div class="card-category">
+        <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>{{ article.category }}</span>
       </div>
+
+      <!-- 文章标题 -->
       <h3 class="card-title">{{ article.title }}</h3>
+
+      <!-- 简短摘要 -->
       <p class="card-excerpt">{{ article.excerpt }}</p>
+
+      <!-- 底部：标签云 + 日期 -->
       <div class="card-footer">
-        <span class="read-more">阅读全文 →</span>
+        <div class="tags" v-if="article.tags && article.tags.length">
+          <span class="tag" v-for="tag in article.tags" :key="tag">#{{ tag }}</span>
+        </div>
+        <span class="date">{{ article.date }}</span>
       </div>
     </div>
   </article>
@@ -38,11 +48,6 @@ const { targetRef, isVisible } = useIntersectionObserver()
 
 const goToArticle = () => {
   router.push(`/article/${props.article.id}`)
-}
-
-const formatDate = (date) => {
-  const d = new Date(date)
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 </script>
 
@@ -67,104 +72,101 @@ const formatDate = (date) => {
   }
 
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
 
     .card-title {
       color: var(--color-accent);
     }
-
-    .read-more {
-      color: var(--color-accent);
-      padding-left: var(--spacing-xs);
-    }
   }
 
   &:active {
-    transform: translateY(-5px) scale(0.99);
-  }
-}
-
-.card-image {
-  position: relative;
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-  background: var(--color-bg-tertiary);
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform var(--transition-slow);
-  }
-
-  .article-card:hover & img {
-    transform: scale(1.05);
+    transform: translateY(-4px) scale(0.99);
   }
 }
 
 .card-content {
-  padding: var(--spacing-lg);
+  padding: var(--spacing-xl);
 }
 
-.card-meta {
-  display: flex;
+/* 分类小标签 */
+.card-category {
+  display: inline-flex;
   align-items: center;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-
-  .category {
-    padding: 2px 8px;
-    background: var(--color-accent-light);
-    color: var(--color-accent);
-    border-radius: var(--radius-sm);
-    font-weight: 500;
-  }
+  gap: var(--spacing-xs);
+  padding: 6px 12px;
+  margin-bottom: var(--spacing-md);
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
 }
 
+.category-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* 文章标题 */
 .card-title {
   font-size: var(--font-size-xl);
   font-weight: 600;
   line-height: var(--line-height-tight);
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
   transition: color var(--transition-base);
 }
 
+/* 简短摘要 */
 .card-excerpt {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   line-height: var(--line-height-base);
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+/* 底部：标签云 + 日期 */
 .card-footer {
-  .read-more {
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--color-text-tertiary);
-    transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.tag {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  transition: color var(--transition-base);
+
+  &:hover {
+    color: var(--color-accent);
   }
 }
 
-@media (max-width: 768px) {
-  .card-image {
-    height: 160px;
-  }
+.date {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
 
+@media (max-width: 768px) {
   .card-content {
     padding: var(--spacing-md);
   }
 
   .card-title {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-base);
   }
 }
 </style>

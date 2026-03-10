@@ -2,7 +2,7 @@
  * useIntersectionObserver - 滚动可视区域检测
  * 使用Intersection Observer API实现元素进入可视区域时的动效
  */
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 export function useIntersectionObserver(options = {}) {
   const isVisible = ref(false)
@@ -15,8 +15,11 @@ export function useIntersectionObserver(options = {}) {
     ...options
   }
 
-  onMounted(() => {
+  const startObserver = () => {
     if (!targetRef.value) return
+
+    // 如果已经可见，不再观察
+    if (isVisible.value) return
 
     observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -29,6 +32,16 @@ export function useIntersectionObserver(options = {}) {
     }, defaultOptions)
 
     observer.observe(targetRef.value)
+  }
+
+  watch(targetRef, (newVal) => {
+    if (newVal && !isVisible.value) {
+      startObserver()
+    }
+  })
+
+  onMounted(() => {
+    startObserver()
   })
 
   onUnmounted(() => {

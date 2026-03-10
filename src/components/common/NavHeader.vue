@@ -276,8 +276,8 @@ onUnmounted(() => {
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(-5px);
+  left: 0;
+  transform: translateY(-5px);
   min-width: 140px;
   padding: var(--spacing-sm);
   background: var(--glass-bg-solid);
