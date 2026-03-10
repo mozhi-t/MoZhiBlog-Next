@@ -36,6 +36,12 @@ const routes = [
     meta: { title: '关于' }
   },
   {
+    path: '/links',
+    name: 'Links',
+    component: () => import('../views/LinksPage.vue'),
+    meta: { title: '友链' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFoundPage.vue'),

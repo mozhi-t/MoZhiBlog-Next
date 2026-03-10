@@ -107,6 +107,7 @@ const navItems = [
     { name: '随笔', path: '/category/essay' }
   ]},
   { name: '归档', path: '/archive' },
+  { name: '友链', path: '/links' },
   { name: '关于', path: '/about' }
 ]
 
