@@ -7,7 +7,7 @@
   >
     <div class="card-content">
       <!-- 分类小标签 -->
-      <div class="card-category" @click.stop="goToCategory" v-if="article.category">
+      <div class="card-category">
         <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -23,10 +23,10 @@
       <!-- 底部：标签云 + 日期 -->
       <div class="card-footer">
         <div class="tags" v-if="article.tag_list && article.tag_list.length > 0">
-          <span class="tag" v-for="tag in article.tag_list" :key="tag.id" @click.stop="goToTag(tag.id)">#{{ tag.name }}</span>
+          <span class="tag" v-for="tag in article.tag_list" :key="tag.id">#{{ tag.name }}</span>
         </div>
         <div class="tags" v-else-if="article.tag">
-          <span class="tag" @click.stop="goToTag(article.tag.id)">#{{ article.tag.name }}</span>
+          <span class="tag">#{{ article.tag.name }}</span>
         </div>
         <span class="date">{{ article.date }}</span>
       </div>
@@ -51,16 +51,6 @@ const { targetRef, isVisible } = useIntersectionObserver()
 
 const goToArticle = () => {
   router.push(`/article/${props.article.id}`)
-}
-
-const goToCategory = () => {
-  if (props.article.category_id) {
-    router.push(`/category?id=${props.article.category_id}`)
-  }
-}
-
-const goToTag = (tagId) => {
-  router.push(`/tag?id=${tagId}`)
 }
 </script>
 
@@ -114,13 +104,6 @@ const goToTag = (tagId) => {
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-base);
-
-  &:hover {
-    background: var(--color-accent);
-    color: #fff;
-  }
 }
 
 .category-icon {
@@ -169,7 +152,6 @@ const goToTag = (tagId) => {
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
   transition: color var(--transition-base);
-  cursor: pointer;
 
   &:hover {
     color: var(--color-accent);

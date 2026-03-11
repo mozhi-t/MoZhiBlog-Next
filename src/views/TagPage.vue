@@ -90,7 +90,6 @@ const selectTag = async (tag) => {
         excerpt: item.summary || '',
         date: new Date(item.create_time).toLocaleDateString('zh-CN'),
         category: item.category?.name || '',
-        category_id: item.category_id || null,
         tag_list: item.tag_list || []
       }))
     } catch (error) {

@@ -112,7 +112,6 @@ const navItems = [
   },
   { name: '归档', path: '/archive' },
   { name: '友链', path: '/links' },
-  { name: '留言', path: '/message' },
   { name: '关于', path: '/about' }
 ]
 
