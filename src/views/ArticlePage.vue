@@ -6,11 +6,63 @@
         <router-link :to="`/category/${article.categorySlug}`" class="category-tag">
           {{ article.category }}
         </router-link>
-        <span class="publish-date">{{ formatDate(article.date) }}</span>
       </div>
       <h1 class="article-title">{{ article.title }}</h1>
-      <div class="article-tags" v-if="article.tag">
-        <span class="tag">#{{ article.tag.name }}</span>
+
+      <!-- Article Tags -->
+      <div class="article-tags" v-if="article.tagList && article.tagList.length > 0">
+        <router-link
+          v-for="tag in article.tagList"
+          :key="tag.id"
+          :to="`/tag?id=${tag.id}`"
+          class="tag"
+        >
+          #{{ tag.name }}
+        </router-link>
+      </div>
+
+      <!-- Article Stats -->
+      <div class="article-stats">
+        <span class="stat-item">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          发布于 {{ formatDate(article.date, true) }}
+        </span>
+        <span class="stat-item" v-if="article.updateTime && article.updateTime !== article.date">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          更新于 {{ formatDate(article.updateTime, true) }}
+        </span>
+        <span class="stat-item">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          {{ article.readCount || 0 }} 阅读
+        </span>
+        <span class="stat-item">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          {{ wordCount }} 字
+        </span>
+        <span class="stat-item">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          阅读需 {{ readingTime }} 分钟
+        </span>
       </div>
     </header>
 
@@ -161,10 +213,32 @@ const article = ref({
   title: '',
   excerpt: '',
   date: '',
+  updateTime: '',
   category: '',
   categorySlug: '',
-  tag: null,
-  content: ''
+  tagList: [],
+  content: '',
+  readCount: 0
+})
+
+// 计算字数
+const wordCount = computed(() => {
+  if (!article.value.content) return 0
+  // 移除 Markdown 语法符号，计算纯文本字数
+  const text = article.value.content
+    .replace(/```[\s\S]*?```/g, '') // 移除代码块
+    .replace(/`[^`]+`/g, '') // 移除行内代码
+    .replace(/!\[.*?\]\(.*?\)/g, '') // 移除图片
+    .replace(/\[.*?\]\(.*?\)/g, '') // 移除链接
+    .replace(/[#*_~>`\-]/g, '') // 移除 Markdown 符号
+    .replace(/\n+/g, '') // 移除换行
+  return text.length
+})
+
+// 计算阅读时间（每分钟300字）
+const readingTime = computed(() => {
+  if (wordCount.value === 0) return 0
+  return Math.ceil(wordCount.value / 300)
 })
 
 // 从API加载文章
@@ -182,10 +256,12 @@ const loadArticle = async () => {
       title: data.title,
       excerpt: data.summary || '',
       date: data.create_time,
+      updateTime: data.update_time,
       category: data.category?.name || '',
       categorySlug: data.category?.name || '',
-      tag: data.tag || null,
-      content: data.content
+      tagList: data.tag_list || [],
+      content: data.content,
+      readCount: data.read_count || 0
     }
 
     // 设置标题滚动监听
@@ -273,9 +349,18 @@ const scrollToAnchor = (id) => {
   }
 }
 
-// Format date
-const formatDate = (date) => {
+// Format date (with time for article metadata)
+const formatDate = (date, includeTime = false) => {
   if (!date) return ''
+  if (includeTime) {
+    return new Date(date).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
   return new Date(date).toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: 'long',
@@ -395,7 +480,6 @@ const handleScroll = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
 }
 
@@ -415,11 +499,6 @@ const handleScroll = () => {
   }
 }
 
-.publish-date {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-}
-
 .article-title {
   font-size: var(--font-size-4xl);
   font-weight: 700;
@@ -431,14 +510,45 @@ const handleScroll = () => {
 .article-tags {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
 
   .tag {
-    padding: 2px 10px;
+    padding: 4px 12px;
     background: var(--color-bg-tertiary);
     color: var(--color-text-secondary);
     font-size: var(--font-size-xs);
     border-radius: var(--radius-full);
+    text-decoration: none;
+    transition: all var(--transition-base);
+
+    &:hover {
+      background: var(--color-accent-light);
+      color: var(--color-accent);
+    }
+  }
+}
+
+.article-stats {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-md);
+
+  .stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-tertiary);
+
+    .icon {
+      width: 14px;
+      height: 14px;
+      opacity: 0.7;
+    }
   }
 }
 
@@ -607,6 +717,8 @@ const handleScroll = () => {
 .content-body {
   font-size: var(--reading-font-size, var(--font-size-base));
   line-height: var(--line-height-relaxed);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 
   :deep(.intro) {
     font-size: 1.1em;
@@ -825,6 +937,8 @@ const handleScroll = () => {
     padding: 20px;
     margin: 20px 0;
     overflow-x: auto;
+    overflow-y: hidden;
+    white-space: pre;
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
       0 4px 16px rgba(0, 0, 0, 0.08),
@@ -838,6 +952,7 @@ const handleScroll = () => {
     font-size: 14px;
     color: var(--color-text-primary);
     font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
+    white-space: pre;
   }
 
   :deep(pre code) {
@@ -846,6 +961,7 @@ const handleScroll = () => {
     font-size: 14px;
     line-height: 1.6;
     color: var(--color-text-primary);
+    white-space: pre;
   }
 
   /* 图片样式 */
