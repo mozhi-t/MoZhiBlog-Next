@@ -447,7 +447,7 @@ onMounted(() => {
   setTimeout(addCodeBlockHeader, 100)
 })
 
-// 动态添加代码块的语言标签、行号和复制按钮
+// 动态添加代码块的语言标签和复制按钮
 const addCodeBlockHeader = () => {
   const codeBlocks = document.querySelectorAll('.content-body pre')
   codeBlocks.forEach(pre => {
@@ -459,10 +459,6 @@ const addCodeBlockHeader = () => {
     // 获取语言
     const langEl = codeEl.classList.value.match(/language-(\S+)/)
     const lang = langEl ? langEl[1] : 'text'
-
-    // 计算行号
-    const lines = code.split('\n')
-    const lineCount = lines.length
 
     // 创建包装元素
     const wrapper = document.createElement('div')
@@ -482,25 +478,10 @@ const addCodeBlockHeader = () => {
       </button>
     `
 
-    // 创建代码内容容器（包含行号和代码）
-    const codeContent = document.createElement('div')
-    codeContent.className = 'code-content'
-
-    // 创建行号容器
-    const lineNumbers = document.createElement('div')
-    lineNumbers.className = 'line-numbers'
-    for (let i = 1; i <= lineCount; i++) {
-      const lineNum = document.createElement('span')
-      lineNum.textContent = i
-      lineNumbers.appendChild(lineNum)
-    }
-
     // 将 pre 包装到 wrapper 中
     pre.parentNode?.insertBefore(wrapper, pre)
     wrapper.appendChild(header)
-    codeContent.appendChild(lineNumbers)
-    codeContent.appendChild(pre)
-    wrapper.appendChild(codeContent)
+    wrapper.appendChild(pre)
   })
 
   // 绑定复制按钮事件
@@ -1015,18 +996,6 @@ const handleScroll = () => {
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
       0 4px 16px rgba(0, 0, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-  }
-
-  :deep(.code-content) {
-    display: flex;
-    overflow-x: auto;
-    background: var(--color-bg-tertiary);
-  }
-
-  :deep(.code-block-wrapper > .code-header) {
-    flex-shrink: 0;
   }
 
   :deep(.code-header) {
@@ -1036,28 +1005,6 @@ const handleScroll = () => {
     padding: 8px 16px;
     background: var(--color-bg-secondary);
     border-bottom: 1px solid var(--color-border);
-  }
-
-  :deep(.line-numbers) {
-    display: flex;
-    flex-direction: column;
-    background: var(--color-bg-tertiary);
-    border-right: 1px solid var(--color-border);
-    padding: 20px 0;
-    margin: 0;
-    text-align: right;
-    user-select: none;
-    min-width: 40px;
-    flex-shrink: 0;
-  }
-
-  :deep(.line-numbers span) {
-    display: block;
-    padding: 0 12px;
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--color-text-tertiary);
-    font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
   }
 
   :deep(.code-lang) {
@@ -1107,7 +1054,6 @@ const handleScroll = () => {
     overflow-y: hidden;
     white-space: pre;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    flex: 1;
   }
 
   :deep(code) {
