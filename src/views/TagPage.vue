@@ -108,7 +108,11 @@ const loadArticlesByTag = async (tagId, page = 1) => {
       date: new Date(item.create_time).toLocaleDateString('zh-CN'),
       category: item.category?.name || '',
       category_id: item.category_id || null,
-      tag_list: item.tag_list || []
+      tag_list: item.tag_list || [],
+      read_count: item.read_count || 0,
+      content: item.content || '',
+      create_time: item.create_time,
+      update_time: item.update_time
     }))
     total.value = res.data.total || 0
     currentPage.value = page

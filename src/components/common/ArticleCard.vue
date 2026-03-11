@@ -20,7 +20,7 @@
       <!-- 简短摘要 -->
       <p class="card-excerpt">{{ article.excerpt }}</p>
 
-      <!-- 底部：标签云 + 日期 -->
+      <!-- 底部：标签云 + 日期 + 阅读数 -->
       <div class="card-footer">
         <div class="tags" v-if="article.tag_list && article.tag_list.length > 0">
           <span class="tag" v-for="tag in article.tag_list" :key="tag.id" @click.stop="goToTag(tag.id)">#{{ tag.name }}</span>
@@ -28,7 +28,35 @@
         <div class="tags" v-else-if="article.tag">
           <span class="tag" @click.stop="goToTag(article.tag.id)">#{{ article.tag.name }}</span>
         </div>
-        <span class="date">{{ article.date }}</span>
+        <div class="right-info">
+          <div class="dates">
+            <span class="date-item">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              {{ formatDate(article.create_time, true) }}
+            </span>
+            <span class="date-item" v-if="article.update_time && article.update_time !== article.create_time">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              {{ formatDate(article.update_time, true) }}
+            </span>
+          </div>
+          <div class="stats">
+            <span class="stat-item">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              {{ article.read_count || 0 }}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   </article>
@@ -48,6 +76,25 @@ const props = defineProps({
 
 const router = useRouter()
 const { targetRef, isVisible } = useIntersectionObserver()
+
+// 格式化日期
+const formatDate = (date, includeTime = false) => {
+  if (!date) return ''
+  if (includeTime) {
+    return new Date(date).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+  return new Date(date).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+}
 
 const goToArticle = () => {
   router.push(`/article/${props.article.id}`)
@@ -150,7 +197,7 @@ const goToTag = (tagId) => {
   overflow: hidden;
 }
 
-/* 底部：标签云 + 日期 */
+/* 底部：标签云 + 日期 + 阅读数 */
 .card-footer {
   display: flex;
   align-items: center;
@@ -176,9 +223,50 @@ const goToTag = (tagId) => {
   }
 }
 
-.date {
-  font-size: var(--font-size-sm);
+.right-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.date-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
+
+  .icon {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+  }
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+
+  .icon {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+  }
 }
 
 @media (max-width: 768px) {

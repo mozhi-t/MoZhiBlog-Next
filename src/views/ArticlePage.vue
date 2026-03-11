@@ -91,8 +91,6 @@
 
       <!-- Main Content -->
       <div class="content-body" ref="contentRef">
-        <p class="intro" v-if="article.excerpt">{{ article.excerpt }}</p>
-
         <!-- 渲染Markdown内容 -->
         <div v-html="renderedContent"></div>
       </div>
@@ -211,7 +209,6 @@ const notFound = ref(false)
 const article = ref({
   id: route.params.id,
   title: '',
-  excerpt: '',
   date: '',
   updateTime: '',
   category: '',
@@ -254,7 +251,6 @@ const loadArticle = async () => {
     article.value = {
       id: data.id,
       title: data.title,
-      excerpt: data.summary || '',
       date: data.create_time,
       updateTime: data.update_time,
       category: data.category?.name || '',
@@ -657,7 +653,7 @@ const handleScroll = () => {
 }
 
 .toc-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--color-text-primary);
   margin: 0;
@@ -700,7 +696,7 @@ const handleScroll = () => {
     display: block;
     padding: 10px 16px;
     padding-left: 20px;
-    font-size: 15px;
+    font-size: 16px;
     color: var(--color-text-secondary);
     text-decoration: none;
     border-radius: var(--radius-sm);
@@ -744,12 +740,12 @@ const handleScroll = () => {
 
   &[style*="--level: 2"] a {
     padding-left: 32px;
-    font-size: 14px;
+    font-size: 15px;
   }
 
   &[style*="--level: 3"] a {
     padding-left: 44px;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--color-text-tertiary);
   }
 
@@ -778,17 +774,6 @@ const handleScroll = () => {
   line-height: var(--line-height-relaxed);
   overflow-wrap: break-word;
   word-wrap: break-word;
-
-  :deep(.intro) {
-    font-size: 1.1em;
-    color: var(--color-text-secondary);
-    font-style: italic;
-    margin-bottom: var(--spacing-xl);
-    padding: var(--spacing-lg);
-    background: var(--color-bg-tertiary);
-    border-radius: var(--radius-md);
-    border-left: 3px solid var(--color-accent);
-  }
 
   /* ============================================
      Markdown 内容样式 - 苹果风格
@@ -827,7 +812,7 @@ const handleScroll = () => {
   }
 
   :deep(h1) {
-    font-size: 28px;
+    font-size: 31px;
     font-weight: 500;
     color: var(--color-text-primary);
     line-height: 1.4;
@@ -841,12 +826,12 @@ const handleScroll = () => {
     }
 
     @media (max-width: 768px) {
-      font-size: 24px;
+      font-size: 27px;
     }
   }
 
   :deep(h2) {
-    font-size: 24px;
+    font-size: 27px;
     font-weight: 500;
     color: var(--color-text-primary);
     line-height: 1.4;
@@ -860,12 +845,12 @@ const handleScroll = () => {
     }
 
     @media (max-width: 768px) {
-      font-size: 20px;
+      font-size: 23px;
     }
   }
 
   :deep(h3) {
-    font-size: 20px;
+    font-size: 23px;
     font-weight: 500;
     color: var(--color-text-primary);
     line-height: 1.4;
@@ -877,12 +862,12 @@ const handleScroll = () => {
     }
 
     @media (max-width: 768px) {
-      font-size: 18px;
+      font-size: 21px;
     }
   }
 
   :deep(h4), :deep(h5), :deep(h6) {
-    font-size: 16px;
+    font-size: 19px;
     font-weight: 500;
     color: var(--color-text-primary);
     line-height: 1.4;
@@ -897,14 +882,14 @@ const handleScroll = () => {
 
   /* 段落样式 */
   :deep(p) {
-    font-size: 16px;
+    font-size: 19px;
     color: var(--color-text-primary);
     line-height: 1.8;
     margin: 16px 0;
     text-indent: 0;
 
     @media (max-width: 768px) {
-      font-size: 15px;
+      font-size: 18px;
     }
   }
 
@@ -1057,13 +1042,14 @@ const handleScroll = () => {
   }
 
   :deep(code) {
-    background: var(--color-bg-tertiary);
+    background: #e8e8e8;
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 14px;
-    color: var(--color-text-primary);
+    color: #4a4a4a;
     font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
     white-space: pre;
+    border: 1px solid #d4d4d4;
   }
 
   :deep(pre code) {
@@ -1073,6 +1059,7 @@ const handleScroll = () => {
     line-height: 1.6;
     color: var(--color-text-primary);
     white-space: pre;
+    border: none;
   }
 
   /* 图片样式 */

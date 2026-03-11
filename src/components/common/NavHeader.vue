@@ -227,7 +227,7 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-base);
+  font-size: 17px;
   font-weight: 500;
   color: var(--color-text-secondary);
   text-decoration: none;
