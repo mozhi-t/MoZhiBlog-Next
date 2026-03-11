@@ -443,7 +443,57 @@ onMounted(() => {
   loadArticle()
   calculateProgress()
   window.addEventListener('scroll', handleScroll, { passive: true })
+  // 渲染完成后添加代码块的语言标签和复制按钮
+  setTimeout(addCodeBlockHeader, 100)
 })
+
+// 动态添加代码块的语言标签和复制按钮
+const addCodeBlockHeader = () => {
+  const codeBlocks = document.querySelectorAll('.content-body pre')
+  codeBlocks.forEach(pre => {
+    if (pre.querySelector('.code-header')) return // 已处理过
+    if (!pre.querySelector('code.hljs')) return // 不是代码块
+
+    const codeEl = pre.querySelector('code')
+    const code = codeEl?.textContent || ''
+    // 获取语言
+    const langEl = codeEl.classList.value.match(/language-(\S+)/)
+    const lang = langEl ? langEl[1] : 'text'
+
+    const header = document.createElement('div')
+    header.className = 'code-header'
+    header.innerHTML = `
+      <span class="code-lang">${lang}</span>
+      <button class="copy-btn" data-code="${encodeURIComponent(code)}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <span>复制</span>
+      </button>
+    `
+    pre.parentNode?.insertBefore(header, pre)
+  })
+
+  // 绑定复制按钮事件
+  document.querySelectorAll('.content-body .copy-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const code = decodeURIComponent(btn.dataset.code || '')
+      try {
+        await navigator.clipboard.writeText(code)
+        const span = btn.querySelector('span')
+        span.textContent = '已复制'
+        btn.classList.add('copied')
+        setTimeout(() => {
+          span.textContent = '复制'
+          btn.classList.remove('copied')
+        }, 2000)
+      } catch (err) {
+        console.error('复制失败:', err)
+      }
+    }
+  })
+}
 
 onUnmounted(() => {
   if (headingObserver) {
@@ -930,12 +980,67 @@ const handleScroll = () => {
   }
 
   /* 代码块样式 */
+  :deep(.content-body > pre) {
+    position: relative;
+    margin: 20px 0;
+  }
+
+  :deep(.code-header) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-bottom: none;
+  }
+
+  :deep(.code-lang) {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-accent);
+    text-transform: lowercase;
+  }
+
+  :deep(.copy-btn) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      background: var(--color-accent-light);
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+
+    &.copied {
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      color: white;
+    }
+  }
+
   :deep(pre) {
     background: var(--color-bg-tertiary);
     backdrop-filter: blur(4px);
-    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
     padding: 20px;
-    margin: 20px 0;
+    margin: 0;
     overflow-x: auto;
     overflow-y: hidden;
     white-space: pre;
