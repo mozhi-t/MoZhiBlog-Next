@@ -18,13 +18,17 @@
     <article class="article-content" :style="{ '--reading-font-size': fontSize }">
       <!-- Table of Contents -->
       <aside class="toc" v-if="toc.length > 0">
-        <h4 class="toc-title">目录</h4>
+        <div class="toc-header">
+          <h4 class="toc-title">目录</h4>
+          <span class="toc-progress">{{ readingProgress }}%</span>
+        </div>
         <ul class="toc-list">
           <li
             v-for="item in toc"
             :key="item.id"
             class="toc-item"
             :class="{ active: activeAnchor === item.id }"
+            :style="{ '--level': item.level }"
           >
             <a :href="`#${item.id}`" @click.prevent="scrollToAnchor(item.id)">
               {{ item.text }}
@@ -108,10 +112,38 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { marked } from 'marked'
+import { Marked } from 'marked'
+import { markedHighlight } from 'marked-highlight'
+import hljs from 'highlight.js'
 import { useReadingStore } from '../stores/reading'
 import { useActiveAnchor, useScrollObserver } from '../composables/useObserver'
 import { articlesApi, commentsApi } from '../api/frontend'
+
+// 配置 marked 使用 highlight.js
+const marked = new Marked(
+  markedHighlight({
+    langPrefix: 'hljs language-',
+    highlight(code, lang) {
+      const language = hljs.getLanguage(lang) ? lang : 'plaintext'
+      return hljs.highlight(code, { language }).value
+    }
+  }),
+  {
+    gfm: true,
+    breaks: true
+  }
+)
+
+// 自定义渲染器，给标题添加 id
+const renderer = {
+  heading({ tokens, depth }) {
+    const text = this.parser.parseInline(tokens)
+    const id = text.toLowerCase().replace(/[^\u4e00-\u9fa5a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    return `<h${depth} id="${id}">${text}</h${depth}>`
+  }
+}
+
+marked.use({ renderer })
 
 const route = useRoute()
 const readingStore = useReadingStore()
@@ -156,6 +188,10 @@ const loadArticle = async () => {
       content: data.content
     }
 
+    // 设置标题滚动监听
+    setupHeadingObserver()
+    activeAnchor.value = ''
+
     // 加载评论
     loadComments()
   } catch (error) {
@@ -189,14 +225,13 @@ const toc = computed(() => {
   if (!article.value.content) return []
   const headings = []
   const lines = article.value.content.split('\n')
-  let currentLevel = 0
 
   lines.forEach(line => {
     const match = line.match(/^(#{1,3})\s+(.+)$/)
     if (match) {
       const level = match[1].length
       const text = match[2]
-      const id = text.toLowerCase().replace(/[^\u4e00-\u9fa5a-z0-9]+/g, '-')
+      const id = text.toLowerCase().replace(/[^\u4e00-\u9fa5a-z0-9]+/g, '-').replace(/^-|-$/g, '')
       headings.push({ id, text, level })
     }
   })
@@ -207,7 +242,7 @@ const toc = computed(() => {
 // 渲染Markdown内容
 const renderedContent = computed(() => {
   if (!article.value.content) return ''
-  return marked(article.value.content)
+  return marked.parse(article.value.content)
 })
 
 // Image lazy loading
@@ -215,6 +250,18 @@ const imageLoaded = ref(false)
 
 // Active anchor tracking
 const activeAnchor = ref('')
+
+// 阅读进度
+const readingProgress = ref(0)
+
+// 计算阅读进度
+const calculateProgress = () => {
+  const scrollTop = window.scrollY
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight
+  if (docHeight > 0) {
+    readingProgress.value = Math.min(100, Math.round((scrollTop / docHeight) * 100))
+  }
+}
 
 // Scroll to anchor
 const scrollToAnchor = (id) => {
@@ -275,9 +322,55 @@ watch(() => route.params.id, () => {
   loadArticle()
 })
 
+// 监听标题滚动位置
+let headingObserver = null
+
+const setupHeadingObserver = () => {
+  if (headingObserver) {
+    headingObserver.disconnect()
+  }
+
+  // 等待 DOM 更新
+  setTimeout(() => {
+    const headings = document.querySelectorAll('.content-body h1, .content-body h2, .content-body h3')
+    if (headings.length === 0) return
+
+    const observerOptions = {
+      rootMargin: '-80px 0px -70% 0px',
+      threshold: 0
+    }
+
+    headingObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          activeAnchor.value = entry.target.id
+        }
+      })
+    }, observerOptions)
+
+    headings.forEach((heading) => {
+      headingObserver.observe(heading)
+    })
+  }, 100)
+}
+
 onMounted(() => {
   loadArticle()
+  calculateProgress()
+  window.addEventListener('scroll', handleScroll, { passive: true })
 })
+
+onUnmounted(() => {
+  if (headingObserver) {
+    headingObserver.disconnect()
+  }
+  window.removeEventListener('scroll', handleScroll)
+})
+
+// 滚动处理函数
+const handleScroll = () => {
+  calculateProgress()
+}
 </script>
 
 <style lang="scss" scoped>
@@ -352,8 +445,16 @@ onMounted(() => {
 /* Article Content Layout */
 .article-content {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 260px 1fr;
   gap: var(--spacing-2xl);
+  align-items: start;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 240px 1fr;
+    max-width: 1000px;
+  }
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
@@ -366,48 +467,139 @@ onMounted(() => {
   top: 100px;
   align-self: start;
   padding: var(--spacing-lg);
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-md);
+  padding-left: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
 
   @media (max-width: 1024px) {
     display: none;
   }
 }
 
+.toc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-divider);
+}
+
 .toc-title {
-  font-size: var(--font-size-sm);
+  font-size: 15px;
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-md);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.toc-progress {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-accent);
+  background: var(--color-accent-light);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
 }
 
 .toc-list {
   list-style: none;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin-left: -4px;
+
+  /* 隐藏滚动条但保持滚动功能 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 2px;
+  }
 }
 
 .toc-item {
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: 4px;
+  position: relative;
 
   a {
     display: block;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: var(--font-size-sm);
+    padding: 10px 16px;
+    padding-left: 20px;
+    font-size: 15px;
     color: var(--color-text-secondary);
     text-decoration: none;
-    border-left: 1px solid transparent;
-    transition: all var(--transition-base);
+    border-radius: var(--radius-sm);
+    transition: all 0.25s ease;
+    line-height: 1.4;
+    overflow: visible;
+    white-space: normal;
+    word-break: break-word;
 
     &:hover {
       color: var(--color-accent);
+      background: var(--color-accent-light);
     }
   }
 
-  &.active a {
-    color: var(--color-accent);
-    border-left-color: var(--color-accent);
-    background: var(--color-accent-light);
+  /* 左侧圆角矩形条 */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: var(--color-accent);
+    border-radius: 2px;
+    transition: all 0.25s ease;
+    opacity: 0;
+  }
+
+  &:hover::before {
+    height: 60%;
+    opacity: 0.5;
+  }
+
+  /* 根据标题级别调整缩进 */
+  &[style*="--level: 1"] a {
+    padding-left: 20px;
+    font-weight: 500;
+  }
+
+  &[style*="--level: 2"] a {
+    padding-left: 32px;
+    font-size: 14px;
+  }
+
+  &[style*="--level: 3"] a {
+    padding-left: 44px;
+    font-size: 14px;
+    color: var(--color-text-tertiary);
+  }
+
+  &[style*="--level: 2"]::before,
+  &[style*="--level: 3"]::before {
+    left: 12px;
+  }
+
+  &.active {
+    a {
+      color: var(--color-accent);
+      background: var(--color-accent-light);
+      font-weight: 500;
+    }
+
+    &::before {
+      height: 70%;
+      opacity: 1;
+    }
   }
 }
 
@@ -416,7 +608,7 @@ onMounted(() => {
   font-size: var(--reading-font-size, var(--font-size-base));
   line-height: var(--line-height-relaxed);
 
-  .intro {
+  :deep(.intro) {
     font-size: 1.1em;
     color: var(--color-text-secondary);
     font-style: italic;
@@ -427,45 +619,286 @@ onMounted(() => {
     border-left: 3px solid var(--color-accent);
   }
 
-  h2 {
-    font-size: var(--font-size-2xl);
-    font-weight: 600;
-    margin-top: var(--spacing-2xl);
-    margin-bottom: var(--spacing-md);
-    padding-top: var(--spacing-md);
-    color: var(--color-text-primary);
-  }
+  /* ============================================
+     Markdown 内容样式 - 苹果风格
+     ============================================ */
 
-  h3 {
-    font-size: var(--font-size-xl);
-    font-weight: 600;
-    margin-top: var(--spacing-xl);
-    margin-bottom: var(--spacing-sm);
-    color: var(--color-text-primary);
-  }
+  /* 标题样式 */
+  :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
+    position: relative;
+    transition: all 0.3s ease;
 
-  p {
-    margin-bottom: var(--spacing-lg);
-    color: var(--color-text-primary);
-  }
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%) scale(0.8);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-accent);
+      padding: 1px 4px;
+      border-radius: 3px;
+      opacity: 0;
+      filter: blur(4px);
+      transition: all 0.3s ease;
+    }
 
-  blockquote {
-    margin: var(--spacing-xl) 0;
-    padding: var(--spacing-lg);
-    background: var(--color-bg-tertiary);
-    border-radius: var(--radius-md);
-    border-left: 3px solid var(--color-accent);
+    &:hover {
+      padding-left: 20px;
 
-    p {
-      margin: 0;
-      font-style: italic;
-      color: var(--color-text-secondary);
+      &::before {
+        opacity: 1;
+        filter: blur(0);
+        transform: translateY(-50%) scale(1);
+      }
     }
   }
 
-  strong {
+  :deep(h1) {
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    margin-top: 24px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-divider);
+
+    &::before {
+      content: 'H1';
+    }
+
+    @media (max-width: 768px) {
+      font-size: 24px;
+    }
+  }
+
+  :deep(h2) {
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    margin-top: 24px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-accent);
+
+    &::before {
+      content: 'H2';
+    }
+
+    @media (max-width: 768px) {
+      font-size: 20px;
+    }
+  }
+
+  :deep(h3) {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    margin-top: 24px;
+    margin-bottom: 16px;
+
+    &::before {
+      content: 'H3';
+    }
+
+    @media (max-width: 768px) {
+      font-size: 18px;
+    }
+  }
+
+  :deep(h4), :deep(h5), :deep(h6) {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    margin-top: 24px;
+    margin-bottom: 16px;
+
+    &::before {
+      content: 'H4';
+      color: var(--color-text-tertiary);
+    }
+  }
+
+  /* 段落样式 */
+  :deep(p) {
+    font-size: 16px;
+    color: var(--color-text-primary);
+    line-height: 1.8;
+    margin: 16px 0;
+    text-indent: 0;
+
+    @media (max-width: 768px) {
+      font-size: 15px;
+    }
+  }
+
+  /* 链接样式 */
+  :deep(a) {
+    color: var(--color-accent);
+    text-decoration: none;
+    transition: all 0.2s;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  /* 强调样式 */
+  :deep(em) {
+    font-style: italic;
+    color: var(--color-text-primary);
+  }
+
+  :deep(strong) {
+    font-weight: 700;
+    color: var(--color-text-primary);
+  }
+
+  /* 列表样式 */
+  :deep(ul), :deep(ol) {
+    margin: 16px 0;
+    padding-left: 0;
+    list-style: none;
+  }
+
+  :deep(li) {
+    margin: 12px 0;
+    color: var(--color-text-primary);
+    line-height: 1.8;
+    position: relative;
+    padding-left: 20px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 6px;
+      height: 6px;
+      background: var(--color-accent);
+      border-radius: 50%;
+    }
+  }
+
+  :deep(ol li) {
+    padding-left: 30px;
+    counter-increment: item;
+
+    &::before {
+      content: counter(item);
+      background: none;
+      width: auto;
+      height: auto;
+      color: var(--color-text-tertiary);
+      font-size: 14px;
+      top: 12px;
+      left: 0;
+    }
+  }
+
+  /* 引用样式 */
+  :deep(blockquote) {
+    margin: 20px 0;
+    padding: 16px;
+    background: var(--color-bg-tertiary);
+    border-left: 4px solid var(--color-accent);
+    border-radius: 8px;
+
+    p {
+      margin: 0;
+      font-size: 15px;
+      color: var(--color-text-tertiary);
+      line-height: 1.7;
+    }
+  }
+
+  /* 代码块样式 */
+  :deep(pre) {
+    background: var(--color-bg-tertiary);
+    backdrop-filter: blur(4px);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    overflow-x: auto;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.06),
+      0 4px 16px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  :deep(code) {
+    background: var(--color-bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
+  }
+
+  :deep(pre code) {
+    background: transparent;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-text-primary);
+  }
+
+  /* 图片样式 */
+  :deep(img) {
+    max-width: 100%;
+    border-radius: 12px;
+    margin: 20px 0;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    transition: all 0.3s;
+
+    &:hover {
+      transform: scale(1.01);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+  }
+
+  /* 表格样式 */
+  :deep(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  :deep(th), :deep(td) {
+    padding: 12px;
+    text-align: left;
+  }
+
+  :deep(th) {
+    background: var(--color-bg-tertiary);
     font-weight: 600;
     color: var(--color-text-primary);
+    border-bottom: 1px solid var(--color-divider);
+  }
+
+  :deep(td) {
+    color: var(--color-text-primary);
+    border-bottom: 1px solid var(--color-divider);
+  }
+
+  :deep(tr:hover td) {
+    background: var(--color-accent-light);
+  }
+
+  /* 分割线 */
+  :deep(hr) {
+    border: none;
+    border-top: 1px solid var(--color-divider);
+    margin: 24px 0;
   }
 }
 
