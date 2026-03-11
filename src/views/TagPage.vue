@@ -90,7 +90,7 @@ const selectTag = async (tag) => {
         excerpt: item.summary || '',
         date: new Date(item.create_time).toLocaleDateString('zh-CN'),
         category: item.category?.name || '',
-        tag: item.tag || null
+        tag_list: item.tag_list || []
       }))
     } catch (error) {
       console.error('加载文章失败:', error)

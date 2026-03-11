@@ -115,3 +115,14 @@ export const tagApi = {
 export const statsApi = {
   dashboard: () => api.get('/stats/dashboard')
 }
+
+// 留言板
+export const messageApi = {
+  list: () => api.get('/messages'),
+  create: (data) => api.post('/messages', data),
+
+  // 管理
+  all: (params) => api.get('/messages/all', { params }),
+  update: (id, data) => api.put(`/messages/${id}`, data),
+  delete: (id) => api.delete(`/messages/${id}`)
+}

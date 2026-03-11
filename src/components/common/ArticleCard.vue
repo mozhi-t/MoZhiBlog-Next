@@ -22,7 +22,10 @@
 
       <!-- 底部：标签云 + 日期 -->
       <div class="card-footer">
-        <div class="tags" v-if="article.tag">
+        <div class="tags" v-if="article.tag_list && article.tag_list.length > 0">
+          <span class="tag" v-for="tag in article.tag_list" :key="tag.id">#{{ tag.name }}</span>
+        </div>
+        <div class="tags" v-else-if="article.tag">
           <span class="tag">#{{ article.tag.name }}</span>
         </div>
         <span class="date">{{ article.date }}</span>

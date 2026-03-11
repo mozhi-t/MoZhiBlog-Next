@@ -48,7 +48,7 @@ class ArticleCreate(BaseModel):
     summary: Optional[str] = Field(None, max_length=500)
     content: str = Field(..., min_length=1)
     category_id: Optional[int] = None
-    tag_id: Optional[int] = None
+    tags: Optional[str] = Field(None, description="标签ID列表，用逗号分隔，如 '1,2,3'")
     type: int = Field(0, description="文章类型: 0-文章, 1-说说")
 
 
@@ -58,7 +58,7 @@ class ArticleUpdate(BaseModel):
     summary: Optional[str] = Field(None, max_length=500)
     content: Optional[str] = None
     category_id: Optional[int] = None
-    tag_id: Optional[int] = None
+    tags: Optional[str] = Field(None, description="标签ID列表，用逗号分隔，如 '1,2,3'")
     type: Optional[int] = Field(None, description="文章类型: 0-文章, 1-说说")
 
 
@@ -68,13 +68,13 @@ class ArticleListResponse(BaseModel):
     title: str
     summary: Optional[str] = None
     category_id: Optional[int] = None
-    tag_id: Optional[int] = None
+    tags: Optional[str] = None
     type: int = 0
     read_count: int
     create_time: datetime
     update_time: datetime
     category: Optional['CategorySimple'] = None
-    tag: Optional['TagSimple'] = None
+    tag_list: Optional[List['TagSimple']] = None
 
     class Config:
         from_attributes = True
@@ -87,13 +87,13 @@ class ArticleDetailResponse(BaseModel):
     summary: Optional[str] = None
     content: str
     category_id: Optional[int] = None
-    tag_id: Optional[int] = None
+    tags: Optional[str] = None
     type: int = 0
     read_count: int
     create_time: datetime
     update_time: datetime
     category: Optional['CategorySimple'] = None
-    tag: Optional['TagSimple'] = None
+    tag_list: Optional[List['TagSimple']] = None
 
     class Config:
         from_attributes = True
@@ -204,6 +204,7 @@ class FriendLinkCreate(BaseModel):
     signature: Optional[str] = Field(None, max_length=200)
     icon_url: Optional[str] = Field(None, max_length=500)
     link_url: str = Field(..., max_length=500)
+    weight: Optional[int] = Field(2, description="权重: 0-挚友, 1-朋友, 2-来客")
 
 
 class FriendLinkUpdate(BaseModel):
@@ -213,6 +214,7 @@ class FriendLinkUpdate(BaseModel):
     icon_url: Optional[str] = Field(None, max_length=500)
     link_url: Optional[str] = Field(None, max_length=500)
     is_show: Optional[int] = None
+    weight: Optional[int] = Field(None, description="权重: 0-挚友, 1-朋友, 2-来客")
 
 
 class FriendLinkResponse(BaseModel):
@@ -222,6 +224,37 @@ class FriendLinkResponse(BaseModel):
     signature: Optional[str] = None
     icon_url: Optional[str] = None
     link_url: str
+    create_time: datetime
+    is_show: int
+    weight: int = 2
+
+    class Config:
+        from_attributes = True
+
+
+# ==================== 留言板 ====================
+
+class MessageBoardCreate(BaseModel):
+    """创建留言请求"""
+    nickname: str = Field(..., min_length=1, max_length=50)
+    email: Optional[str] = Field(None, max_length=100)
+    content: str = Field(..., min_length=1, max_length=1000)
+
+
+class MessageBoardUpdate(BaseModel):
+    """更新留言请求"""
+    nickname: Optional[str] = Field(None, min_length=1, max_length=50)
+    email: Optional[str] = Field(None, max_length=100)
+    content: Optional[str] = Field(None, min_length=1, max_length=1000)
+    is_show: Optional[int] = None
+
+
+class MessageBoardResponse(BaseModel):
+    """留言响应"""
+    id: int
+    nickname: str
+    email: Optional[str] = None
+    content: str
     create_time: datetime
     is_show: int
 

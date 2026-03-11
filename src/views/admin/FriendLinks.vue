@@ -28,6 +28,27 @@
         :class="{ active: filter.isShow === 0 }"
         @click="filter.isShow = 0; loadLinks()"
       >已隐藏</button>
+      <span class="filter-divider">|</span>
+      <button
+        class="filter-btn"
+        :class="{ active: filter.weight === '' }"
+        @click="filter.weight = ''; loadLinks()"
+      >全部类型</button>
+      <button
+        class="filter-btn"
+        :class="{ active: filter.weight === 0 }"
+        @click="filter.weight = 0; loadLinks()"
+      >挚友</button>
+      <button
+        class="filter-btn"
+        :class="{ active: filter.weight === 1 }"
+        @click="filter.weight = 1; loadLinks()"
+      >朋友</button>
+      <button
+        class="filter-btn"
+        :class="{ active: filter.weight === 2 }"
+        @click="filter.weight = 2; loadLinks()"
+      >来客</button>
     </div>
 
     <!-- 友链列表 -->
@@ -49,6 +70,9 @@
         <div class="link-actions">
           <span class="status-tag" :class="link.is_show ? 'show' : 'hidden'">
             {{ link.is_show ? '展示中' : '已隐藏' }}
+          </span>
+          <span class="weight-tag" :class="'weight-' + link.weight">
+            {{ getWeightText(link.weight) }}
           </span>
           <button
             class="action-btn"
@@ -113,6 +137,15 @@
             <label>链接地址</label>
             <input v-model="form.link_url" type="text" class="form-input" placeholder="请输入跳转链接" />
           </div>
+
+          <div class="form-group">
+            <label>权重</label>
+            <select v-model="form.weight" class="form-input">
+              <option :value="0">挚友</option>
+              <option :value="1">朋友</option>
+              <option :value="2">来客</option>
+            </select>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -136,7 +169,8 @@ const size = ref(10)
 const total = ref(0)
 
 const filter = reactive({
-  isShow: ''
+  isShow: '',
+  weight: ''
 })
 
 const showModal = ref(false)
@@ -147,8 +181,18 @@ const form = reactive({
   username: '',
   signature: '',
   icon_url: '',
-  link_url: ''
+  link_url: '',
+  weight: 2
 })
+
+const getWeightText = (weight) => {
+  const weightMap = {
+    0: '挚友',
+    1: '朋友',
+    2: '来客'
+  }
+  return weightMap[weight] || '来客'
+}
 
 const totalPages = computed(() => Math.ceil(total.value / size.value))
 
@@ -160,6 +204,9 @@ const loadLinks = async () => {
     }
     if (filter.isShow !== '') {
       params.is_show = filter.isShow
+    }
+    if (filter.weight !== '') {
+      params.weight = filter.weight
     }
 
     const res = await friendLinkApi.all(params)
@@ -177,12 +224,14 @@ const openModal = (link = null) => {
     form.signature = link.signature || ''
     form.icon_url = link.icon_url || ''
     form.link_url = link.link_url
+    form.weight = link.weight !== undefined ? link.weight : 2
   } else {
     editingId.value = null
     form.username = ''
     form.signature = ''
     form.icon_url = ''
     form.link_url = ''
+    form.weight = 2
   }
   showModal.value = true
 }
@@ -196,7 +245,8 @@ const handleSubmit = async () => {
       username: form.username,
       signature: form.signature,
       icon_url: form.icon_url,
-      link_url: form.link_url
+      link_url: form.link_url,
+      weight: form.weight
     }
 
     if (editingId.value) {
@@ -314,6 +364,13 @@ onMounted(() => {
   }
 }
 
+.filter-divider {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-tertiary);
+  padding: 0 var(--spacing-xs);
+}
+
 .links-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -413,6 +470,27 @@ onMounted(() => {
   &.hidden {
     color: var(--color-text-tertiary);
     background: var(--color-bg-tertiary);
+  }
+}
+
+.weight-tag {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+
+  &.weight-0 {
+    color: #ff9500;
+    background: rgba(255, 149, 0, 0.1);
+  }
+
+  &.weight-1 {
+    color: #007aff;
+    background: rgba(0, 122, 255, 0.1);
+  }
+
+  &.weight-2 {
+    color: #8e8e93;
+    background: rgba(142, 142, 147, 0.1);
   }
 }
 

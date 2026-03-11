@@ -64,9 +64,6 @@ class Tag(Base):
     name = Column(String(50), unique=True, nullable=False)
     create_time = Column(DateTime, default=datetime.now)
 
-    # 关联
-    articles = relationship('Article', back_populates='tag')
-
     def __repr__(self):
         return f"<Tag {self.name}>"
 
@@ -80,7 +77,7 @@ class Article(Base):
     summary = Column(String(500), nullable=True)
     content = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey('category.id'), nullable=True)
-    tag_id = Column(Integer, ForeignKey('tag.id'), nullable=True)
+    tags = Column(String(200), nullable=True)  # 标签ID列表，用逗号分隔，如 "1,2,3"
     type = Column(SmallInteger, default=0)  # 文章类型: 0-文章, 1-说说
     read_count = Column(Integer, default=0)
     create_time = Column(DateTime, default=datetime.now)
@@ -88,7 +85,6 @@ class Article(Base):
 
     # 关联
     category = relationship('Category', back_populates='articles')
-    tag = relationship('Tag', back_populates='articles')
     comments = relationship('Comment', back_populates='article', cascade='all, delete-orphan')
 
     def __repr__(self):
@@ -125,9 +121,39 @@ class FriendLink(Base):
     link_url = Column(String(500), nullable=False)
     create_time = Column(DateTime, default=datetime.now)
     is_show = Column(SmallInteger, default=1)
+    # 权重字段: 0-挚友, 1-朋友, 2-来客
+    weight = Column(SmallInteger, default=2)
 
     def __repr__(self):
         return f"<FriendLink {self.username}>"
+
+
+class Blacklist(Base):
+    """IP黑名单表"""
+    __tablename__ = 'blacklist'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip = Column(String(50), nullable=False, unique=True)
+    failed_attempts = Column(Integer, default=0)  # 失败次数
+    create_time = Column(DateTime, default=datetime.now)
+
+    def __repr__(self):
+        return f"<Blacklist {self.ip}>"
+
+
+class MessageBoard(Base):
+    """留言板表"""
+    __tablename__ = 'message_board'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nickname = Column(String(50), nullable=False)
+    email = Column(String(100), nullable=True)
+    content = Column(String(1000), nullable=False)
+    create_time = Column(DateTime, default=datetime.now)
+    is_show = Column(SmallInteger, default=1)
+
+    def __repr__(self):
+        return f"<MessageBoard {self.id} - {self.nickname}>"
 
 
 # ==================== Create Tables ====================

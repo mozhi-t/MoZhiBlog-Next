@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from config import config
 from models import create_tables
-from routes import admin_router, article_router, category_router, comment_router, friendlink_router, tag_router
+from routes import admin_router, article_router, category_router, comment_router, friendlink_router, tag_router, messageboard_router
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -48,6 +48,7 @@ app.include_router(category_router)
 app.include_router(comment_router)
 app.include_router(friendlink_router)
 app.include_router(tag_router)
+app.include_router(messageboard_router)
 
 
 # 健康检查

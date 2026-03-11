@@ -51,6 +51,12 @@ const routes = [
         name: 'FriendLinks',
         component: () => import('../views/admin/FriendLinks.vue'),
         meta: { title: '友链管理', requiresAuth: true }
+      },
+      {
+        path: 'messages',
+        name: 'Messages',
+        component: () => import('../views/admin/Messages.vue'),
+        meta: { title: '留言管理', requiresAuth: true }
       }
     ]
   }

@@ -16,6 +16,28 @@ from auth import get_current_admin
 router = APIRouter(prefix="/api/articles", tags=["文章"])
 
 
+def get_tags_from_ids(tags_str: str, db: Session):
+    """从逗号分隔的ID字符串获取标签列表"""
+    if not tags_str:
+        return []
+
+    tag_ids = [int(tid.strip()) for tid in tags_str.split(',') if tid.strip().isdigit()]
+    if not tag_ids:
+        return []
+
+    tags = db.query(Tag).filter(Tag.id.in_(tag_ids)).all()
+    return [{"id": t.id, "name": t.name} for t in tags]
+
+
+def parse_tags_for_filter(tags_str: str):
+    """解析标签筛选参数"""
+    if not tags_str:
+        return None
+    # 支持逗号分隔的多个标签ID
+    tag_ids = [int(tid.strip()) for tid in tags_str.split(',') if tid.strip().isdigit()]
+    return tag_ids[0] if tag_ids else None
+
+
 @router.get("")
 def get_articles(
     page: int = Query(1, ge=1),
@@ -34,9 +56,10 @@ def get_articles(
     if category_id:
         query = query.filter(Article.category_id == category_id)
 
-    # 标签筛选
+    # 标签筛选（支持多标签，用逗号分隔）
     if tag_id:
-        query = query.filter(Article.tag_id == tag_id)
+        # 筛选包含指定标签的文章
+        query = query.filter(Article.tags.contains(str(tag_id)))
 
     # 类型筛选
     if type is not None:
@@ -61,25 +84,21 @@ def get_articles(
             if cat:
                 category = {"id": cat.id, "name": cat.name}
 
-        # 获取标签信息
-        tag = None
-        if article.tag_id:
-            t = db.query(Tag).filter(Tag.id == article.tag_id).first()
-            if t:
-                tag = {"id": t.id, "name": t.name}
+        # 获取标签信息列表
+        tag_list = get_tags_from_ids(article.tags, db)
 
         item = {
             "id": article.id,
             "title": article.title,
             "summary": article.summary,
             "category_id": article.category_id,
-            "tag_id": article.tag_id,
+            "tags": article.tags,
             "type": article.type,
             "read_count": article.read_count,
             "create_time": article.create_time.isoformat() if article.create_time else None,
             "update_time": article.update_time.isoformat() if article.update_time else None,
             "category": category,
-            "tag": tag
+            "tag_list": tag_list
         }
         items.append(item)
 
@@ -144,12 +163,8 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
         if cat:
             category = {"id": cat.id, "name": cat.name}
 
-    # 获取标签
-    tag = None
-    if article.tag_id:
-        t = db.query(Tag).filter(Tag.id == article.tag_id).first()
-        if t:
-            tag = {"id": t.id, "name": t.name}
+    # 获取标签列表
+    tag_list = get_tags_from_ids(article.tags, db)
 
     return {
         "code": 200,
@@ -160,13 +175,13 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
             "summary": article.summary,
             "content": article.content,
             "category_id": article.category_id,
-            "tag_id": article.tag_id,
+            "tags": article.tags,
             "type": article.type,
             "read_count": article.read_count,
             "create_time": article.create_time.isoformat() if article.create_time else None,
             "update_time": article.update_time.isoformat() if article.update_time else None,
             "category": category,
-            "tag": tag
+            "tag_list": tag_list
         }
     }
 
@@ -191,13 +206,14 @@ def create_article(
                 detail="分类不存在"
             )
 
-    # 检查标签是否存在
-    if article_data.tag_id:
-        tag = db.query(Tag).filter(Tag.id == article_data.tag_id).first()
-        if not tag:
+    # 验证标签是否存在
+    if article_data.tags:
+        tag_ids = [int(tid.strip()) for tid in article_data.tags.split(',') if tid.strip().isdigit()]
+        existing_tags = db.query(Tag).filter(Tag.id.in_(tag_ids)).all()
+        if len(existing_tags) != len(tag_ids):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="标签不存在"
+                detail="部分标签不存在"
             )
 
     # 创建文章
@@ -206,13 +222,16 @@ def create_article(
         summary=article_data.summary,
         content=article_data.content,
         category_id=article_data.category_id,
-        tag_id=article_data.tag_id,
+        tags=article_data.tags,
         type=article_data.type,
         read_count=0
     )
     db.add(article)
     db.commit()
     db.refresh(article)
+
+    # 获取标签列表
+    tag_list = get_tags_from_ids(article.tags, db)
 
     return {
         "code": 200,
@@ -223,11 +242,12 @@ def create_article(
             "summary": article.summary,
             "content": article.content,
             "category_id": article.category_id,
-            "tag_id": article.tag_id,
+            "tags": article.tags,
             "type": article.type,
             "read_count": article.read_count,
             "create_time": article.create_time.isoformat() if article.create_time else None,
-            "update_time": article.update_time.isoformat() if article.update_time else None
+            "update_time": article.update_time.isoformat() if article.update_time else None,
+            "tag_list": tag_list
         }
     }
 
@@ -249,6 +269,16 @@ def update_article(
             detail="文章不存在"
         )
 
+    # 验证标签是否存在
+    if article_data.tags:
+        tag_ids = [int(tid.strip()) for tid in article_data.tags.split(',') if tid.strip().isdigit()]
+        existing_tags = db.query(Tag).filter(Tag.id.in_(tag_ids)).all()
+        if len(existing_tags) != len(tag_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="部分标签不存在"
+            )
+
     # 更新字段
     update_data = article_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -256,6 +286,9 @@ def update_article(
 
     db.commit()
     db.refresh(article)
+
+    # 获取标签列表
+    tag_list = get_tags_from_ids(article.tags, db)
 
     return {
         "code": 200,
@@ -266,11 +299,12 @@ def update_article(
             "summary": article.summary,
             "content": article.content,
             "category_id": article.category_id,
-            "tag_id": article.tag_id,
+            "tags": article.tags,
             "type": article.type,
             "read_count": article.read_count,
             "create_time": article.create_time.isoformat() if article.create_time else None,
-            "update_time": article.update_time.isoformat() if article.update_time else None
+            "update_time": article.update_time.isoformat() if article.update_time else None,
+            "tag_list": tag_list
         }
     }
 

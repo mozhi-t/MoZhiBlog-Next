@@ -51,8 +51,8 @@
               <span class="text-muted" v-else>-</span>
             </td>
             <td>
-              <span class="tag" v-if="article.tag">{{ article.tag.name }}</span>
-              <span class="text-muted" v-else>-</span>
+              <span class="tag" v-for="tag in article.tag_list" :key="tag.id">{{ tag.name }}</span>
+              <span class="text-muted" v-if="!article.tag_list || article.tag_list.length === 0">-</span>
             </td>
             <td>{{ article.read_count }}</td>
             <td class="time-cell">{{ formatDate(article.create_time) }}</td>
@@ -120,13 +120,14 @@
             </div>
 
             <div class="form-group">
-              <label>标签</label>
-              <select v-model="form.tag_id" class="form-select">
-                <option :value="null">请选择标签</option>
-                <option v-for="tag in tags" :key="tag.id" :value="tag.id">
-                  {{ tag.name }}
-                </option>
-              </select>
+              <label>标签（多选，用逗号分隔ID）</label>
+              <input v-model="form.tags" type="text" class="form-input" placeholder="如: 1,2,3" />
+              <div class="tag-hint">
+                可用标签ID:
+                <span v-for="tag in tags" :key="tag.id" class="tag-id-chip">
+                  {{ tag.id }}:{{ tag.name }}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -191,7 +192,7 @@ const form = reactive({
   summary: '',
   content: '',
   category_id: null,
-  tag_id: null,
+  tags: '',
   type: 0
 })
 
@@ -252,7 +253,7 @@ const openModal = (article = null) => {
     form.summary = article.summary || ''
     form.content = article.content
     form.category_id = article.category_id
-    form.tag_id = article.tag_id
+    form.tags = article.tags || ''
     form.type = article.type || 0
   } else {
     editingId.value = null
@@ -260,7 +261,8 @@ const openModal = (article = null) => {
     form.summary = ''
     form.content = ''
     form.category_id = null
-    form.tag_id = null
+    form.tags = ''
+    form.type = 0
     form.type = 0
   }
   showModal.value = true
@@ -276,7 +278,7 @@ const handleSubmit = async () => {
       summary: form.summary,
       content: form.content,
       category_id: form.category_id,
-      tag_id: form.tag_id,
+      tags: form.tags,
       type: form.type
     }
 
@@ -626,6 +628,21 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-lg);
+}
+
+.tag-hint {
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.tag-id-chip {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 2px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
 }
 
 .form-input,

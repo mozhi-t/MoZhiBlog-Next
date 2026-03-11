@@ -51,6 +51,12 @@ const routes = [
     meta: { title: '友链' }
   },
   {
+    path: '/message',
+    name: 'Message',
+    component: () => import('../views/MessagePage.vue'),
+    meta: { title: '留言板' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFoundPage.vue'),

@@ -15,11 +15,11 @@ router = APIRouter(prefix="/api/friend_links", tags=["友链"])
 @router.get("")
 def get_friend_links(db: Session = Depends(get_db)):
     """
-    获取所有展示的友链列表（公开）
+    获取所有展示的友链列表（公开），按权重和创建时间排序
     """
     links = db.query(FriendLink).filter(
         FriendLink.is_show == 1
-    ).order_by(FriendLink.create_time.desc()).all()
+    ).order_by(FriendLink.weight.asc(), FriendLink.create_time.desc()).all()
 
     return {
         "code": 200,
@@ -31,7 +31,8 @@ def get_friend_links(db: Session = Depends(get_db)):
             "icon_url": l.icon_url,
             "link_url": l.link_url,
             "create_time": l.create_time.isoformat() if l.create_time else None,
-            "is_show": l.is_show
+            "is_show": l.is_show,
+            "weight": l.weight
         } for l in links]
     }
 
@@ -52,7 +53,8 @@ def create_friend_link(
         signature=link_data.signature,
         icon_url=link_data.icon_url,
         link_url=link_data.link_url,
-        is_show=1
+        is_show=1,
+        weight=link_data.weight if link_data.weight is not None else 2
     )
     db.add(link)
     db.commit()
@@ -68,7 +70,8 @@ def create_friend_link(
             "icon_url": link.icon_url,
             "link_url": link.link_url,
             "create_time": link.create_time.isoformat() if link.create_time else None,
-            "is_show": link.is_show
+            "is_show": link.is_show,
+            "weight": link.weight
         }
     }
 
@@ -78,6 +81,7 @@ def get_all_friend_links(
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     is_show: int = Query(None, description="展示状态筛选"),
+    weight: int = Query(None, description="权重筛选: 0-挚友, 1-朋友, 2-来客"),
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
@@ -89,9 +93,12 @@ def get_all_friend_links(
     if is_show is not None:
         query = query.filter(FriendLink.is_show == is_show)
 
+    if weight is not None:
+        query = query.filter(FriendLink.weight == weight)
+
     total = query.count()
 
-    links = query.order_by(desc(FriendLink.create_time))\
+    links = query.order_by(FriendLink.weight.asc(), desc(FriendLink.create_time))\
         .offset((page - 1) * size)\
         .limit(size)\
         .all()
@@ -107,7 +114,8 @@ def get_all_friend_links(
                 "icon_url": l.icon_url,
                 "link_url": l.link_url,
                 "create_time": l.create_time.isoformat() if l.create_time else None,
-                "is_show": l.is_show
+                "is_show": l.is_show,
+                "weight": l.weight
             } for l in links],
             "total": total,
             "page": page,
@@ -151,7 +159,8 @@ def update_friend_link(
             "icon_url": link.icon_url,
             "link_url": link.link_url,
             "create_time": link.create_time.isoformat() if link.create_time else None,
-            "is_show": link.is_show
+            "is_show": link.is_show,
+            "weight": link.weight
         }
     }
 
