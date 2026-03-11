@@ -77,7 +77,7 @@ const goToTag = (tagId) => {
   cursor: pointer;
   opacity: 0;
   transform: translateY(20px);
-  transition: all var(--transition-smooth);
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow var(--transition-base);
 
   &.visible {
     opacity: 1;

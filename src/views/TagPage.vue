@@ -30,12 +30,20 @@
       <h2 class="section-title">{{ selectedTagName }} 下的文章</h2>
       <div class="articles-list">
         <ArticleCard
-          v-for="(article, index) in articles"
+          v-for="article in articles"
           :key="article.id"
           :article="article"
-          :style="{ transitionDelay: `${index * 0.1}s` }"
         />
       </div>
+
+      <!-- Pagination -->
+      <Pagination
+        v-if="total > pageSize"
+        :current-page="currentPage"
+        :total="total"
+        :page-size="pageSize"
+        @page-change="handlePageChange"
+      />
     </div>
   </div>
 </template>
@@ -44,6 +52,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import ArticleCard from '../components/common/ArticleCard.vue'
+import Pagination from '../components/common/Pagination.vue'
 import { tagsApi, articlesApi } from '../api/frontend'
 
 const router = useRouter()
@@ -52,6 +61,9 @@ const tags = ref([])
 const loading = ref(true)
 const selectedTag = ref(null)
 const articles = ref([])
+const currentPage = ref(1)
+const total = ref(0)
+const pageSize = 20
 
 const selectedTagName = computed(() => {
   if (selectedTag.value) {
@@ -79,25 +91,37 @@ const selectTag = async (tag) => {
     // 取消选择
     selectedTag.value = null
     articles.value = []
+    total.value = 0
   } else {
     selectedTag.value = tag.id
-    // 加载该标签下的文章
-    try {
-      const res = await articlesApi.list({ tag_id: tag.id, page: 1, size: 20 })
-      articles.value = (res.data.items || []).map(item => ({
-        id: item.id,
-        title: item.title,
-        excerpt: item.summary || '',
-        date: new Date(item.create_time).toLocaleDateString('zh-CN'),
-        category: item.category?.name || '',
-        category_id: item.category_id || null,
-        tag_list: item.tag_list || []
-      }))
-    } catch (error) {
-      console.error('加载文章失败:', error)
-      articles.value = []
-    }
+    loadArticlesByTag(tag.id, 1)
   }
+}
+
+const loadArticlesByTag = async (tagId, page = 1) => {
+  try {
+    const res = await articlesApi.list({ tag_id: tagId, page, size: pageSize })
+    articles.value = (res.data.items || []).map(item => ({
+      id: item.id,
+      title: item.title,
+      excerpt: item.summary || '',
+      date: new Date(item.create_time).toLocaleDateString('zh-CN'),
+      category: item.category?.name || '',
+      category_id: item.category_id || null,
+      tag_list: item.tag_list || []
+    }))
+    total.value = res.data.total || 0
+    currentPage.value = page
+  } catch (error) {
+    console.error('加载文章失败:', error)
+    articles.value = []
+    total.value = 0
+  }
+}
+
+const handlePageChange = (page) => {
+  loadArticlesByTag(selectedTag.value, page)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 onMounted(() => {

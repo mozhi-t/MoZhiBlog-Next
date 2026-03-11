@@ -32,10 +32,19 @@
         <!-- Right Content - Article List -->
         <div class="articles-list">
           <ArticleCard
-            v-for="(article, index) in articles"
+            v-for="article in articles"
             :key="article.id"
             :article="article"
-            :style="{ transitionDelay: `${index * 0.1}s` }"
+          />
+
+          <!-- Pagination -->
+          <Pagination
+            v-if="total > pageSize"
+            :current-page="currentPage"
+            :total="total"
+            :page-size="pageSize"
+            @page-change="handlePageChange"
+            class="article-pagination"
           />
         </div>
       </div>
@@ -46,6 +55,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import ArticleCard from '../components/common/ArticleCard.vue'
+import Pagination from '../components/common/Pagination.vue'
 import { articlesApi } from '../api/frontend'
 
 const subtitles = [
@@ -64,12 +74,15 @@ const currentChars = computed(() => currentSubtitle.value.split(''))
 
 // 文章列表
 const articles = ref([])
+const currentPage = ref(1)
+const total = ref(0)
+const pageSize = 20
 
 // 加载文章列表
-const loadArticles = async () => {
+const loadArticles = async (page = 1) => {
   try {
     loading.value = true
-    const res = await articlesApi.list({ page: 1, size: 20 })
+    const res = await articlesApi.list({ page, size: pageSize })
     articles.value = res.data.items.map(item => ({
       id: item.id,
       title: item.title,
@@ -79,11 +92,18 @@ const loadArticles = async () => {
       category_id: item.category_id || null,
       tag_list: item.tag_list || []
     }))
+    total.value = res.data.total || 0
+    currentPage.value = page
   } catch (error) {
     console.error('加载文章失败:', error)
   } finally {
     loading.value = false
   }
+}
+
+const handlePageChange = (page) => {
+  loadArticles(page)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const startAnimation = () => {
@@ -271,6 +291,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
+}
+
+/* Article Pagination */
+.article-pagination {
+  margin-top: var(--spacing-xl);
 }
 
 /* Responsive */

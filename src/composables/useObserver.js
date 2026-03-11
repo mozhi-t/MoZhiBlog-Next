@@ -10,8 +10,8 @@ export function useIntersectionObserver(options = {}) {
   let observer = null
 
   const defaultOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px',
+    threshold: 0,
+    rootMargin: '0px 0px -10px 0px',
     ...options
   }
 
