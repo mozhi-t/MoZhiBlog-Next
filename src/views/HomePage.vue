@@ -21,6 +21,15 @@
         <!-- Left Sidebar - Author Card -->
         <aside class="sidebar">
           <div class="author-card">
+            <div
+              class="greeting-cylinder"
+              :class="{ pressing: isPressing }"
+              @click="handleCylinderClick"
+              @mouseenter="handleMouseEnter"
+              @mouseleave="handleMouseLeave"
+            >
+              {{ greetingText }}
+            </div>
             <div class="author-avatar">
               <img src="@/assets/tx.jpg" alt="头像" />
             </div>
@@ -38,6 +47,19 @@
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
               </a>
+            </div>
+
+            <!-- Year Progress Card -->
+            <div class="year-progress-card">
+              <div class="year-progress-header">
+                <span class="year-label">{{ currentYear }}</span>
+                <span class="year-progress-value">{{ yearProgress7 }}%</span>
+              </div>
+              <div class="year-progress-bar">
+                <div class="progress-ring">
+                  <div class="progress-ring-fill" :style="{ width: yearProgress2 + '%' }"></div>
+                </div>
+              </div>
             </div>
           </div>
         </aside>
@@ -70,6 +92,101 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import ArticleCard from '../components/common/ArticleCard.vue'
 import Pagination from '../components/common/Pagination.vue'
 import { articlesApi } from '../api/frontend'
+
+// 问候语数据
+const greetingData = {
+  morning: ['早安呀，记得吃饭！', '早上好，元气满满！', '早安，天天开心！'],
+  noon: ['午安呀，好好吃饭！', '午后好，温柔相伴！', '中午好，别饿肚子！'],
+  afternoon: ['下午好，多喝水呀！', '下午好，劳逸结合！', '下午好，心情明朗！'],
+  evening: ['晚上好，今天辛苦！', '晚安呀，早点睡觉！', '晚安，丢掉烦恼！'],
+  lateNight: ['凌晨好，别熬啦！', '深夜好，该休息啦！', '凌晨好，放下手机！'],
+  special: ['愿美好，如约而至！', '存热爱，平安顺遂！', '常欢喜，岁岁无忧！', '|´・ω・)ノ']
+}
+
+// 获取当前时间段
+const getTimePeriod = () => {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 9) return 'morning'
+  if (hour >= 9 && hour < 12) return 'noon'
+  if (hour >= 12 && hour < 18) return 'afternoon'
+  if (hour >= 18 && hour < 24) return 'evening'
+  return 'lateNight'
+}
+
+// 随机选择问候语（10%概率显示特殊话语）
+const getRandomGreeting = () => {
+  const isSpecial = Math.random() < 0.1
+  if (isSpecial) {
+    const specialList = greetingData.special
+    return specialList[Math.floor(Math.random() * specialList.length)]
+  }
+  const period = getTimePeriod()
+  const list = greetingData[period]
+  return list[Math.floor(Math.random() * list.length)]
+}
+
+const greetingText = ref(getRandomGreeting())
+const originalGreeting = ref(greetingText.value)
+
+// 点击计数器
+const clickCount = ref(0)
+const isPressing = ref(false)
+const hasEntered = ref(false)
+
+const clickMessages = ['点这里干什么', '怎么还点？', '那你点吧']
+
+const handleCylinderClick = () => {
+  if (!hasEntered.value) return
+
+  isPressing.value = true
+  setTimeout(() => {
+    isPressing.value = false
+  }, 150)
+
+  clickCount.value++
+  if (clickCount.value <= 3) {
+    greetingText.value = clickMessages[clickCount.value - 1]
+  } else if (clickCount.value > 3 && clickCount.value < 99) {
+    greetingText.value = `x${clickCount.value}`
+  } else if (clickCount.value === 99) {
+    greetingText.value = '你真有毅力'
+  } else {
+    greetingText.value = `x${clickCount.value}`
+  }
+}
+
+const handleMouseEnter = () => {
+  hasEntered.value = true
+}
+
+const handleMouseLeave = () => {
+  hasEntered.value = false
+  clickCount.value = 0
+  greetingText.value = originalGreeting.value
+}
+
+// 年份进度
+const currentYear = computed(() => new Date().getFullYear())
+
+const getYearProgress = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const start = new Date(year, 0, 0)
+  const end = new Date(year + 1, 0, 0)
+  const passed = now - start
+  const total = end - start
+  return (passed / total) * 100
+}
+
+const yearProgress = ref(getYearProgress())
+const yearProgress2 = computed(() => yearProgress.value.toFixed(2))
+const yearProgress7 = computed(() => yearProgress.value.toFixed(7))
+
+// 每秒更新进度
+let progressTimer = null
+const updateProgress = () => {
+  yearProgress.value = getYearProgress()
+}
 
 const subtitles = [
   '远方很远，步履不停，未来可期',
@@ -150,10 +267,12 @@ const startAnimation = () => {
 onMounted(() => {
   startAnimation()
   loadArticles()
+  progressTimer = setInterval(updateProgress, 1000)
 })
 
 onUnmounted(() => {
   if (timer) clearTimeout(timer)
+  if (progressTimer) clearInterval(progressTimer)
 })
 </script>
 
@@ -274,6 +393,69 @@ onUnmounted(() => {
   }
 }
 
+.greeting-cylinder {
+  position: relative;
+  display: inline-block;
+  width: 180px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  user-select: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid var(--color-border);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid var(--color-bg-tertiary);
+    z-index: 1;
+  }
+
+  &:hover {
+    transform: scale(1.05);
+    background: var(--color-accent-light);
+    opacity: 0.8;
+
+    &::before {
+      border-top-color: var(--color-accent-light);
+    }
+  }
+
+  &.pressing {
+    animation: press 0.15s ease forwards;
+  }
+}
+
+@keyframes press {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+
 .author-avatar {
   width: 100px;
   height: 100px;
@@ -324,6 +506,53 @@ onUnmounted(() => {
     color: var(--color-text-primary);
     transform: scale(1.1);
   }
+}
+
+/* Year Progress Card */
+.year-progress-card {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.year-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.year-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.year-progress-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.year-progress-bar {
+  display: flex;
+  justify-content: center;
+}
+
+.progress-ring {
+  width: 100%;
+  height: 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-ring-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 3px;
+  transition: width 0.5s ease;
 }
 
 /* Right Content - Article List */
