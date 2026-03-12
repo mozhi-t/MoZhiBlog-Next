@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { onMounted } from 'vue'
 import { useThemeStore } from './stores/theme'
 import { useReadingStore } from './stores/reading'
@@ -6,8 +8,12 @@ import NavHeader from './components/common/NavHeader.vue'
 import SiteFooter from './components/common/SiteFooter.vue'
 import ReadingTools from './components/common/ReadingTools.vue'
 
+const route = useRoute()
 const themeStore = useThemeStore()
 const readingStore = useReadingStore()
+
+// 判断是否在后台管理界面
+const isAdminPage = computed(() => route.path.startsWith('/admin'))
 
 // Initialize stores on mount
 onMounted(() => {
@@ -19,10 +25,10 @@ onMounted(() => {
 <template>
   <div class="app-wrapper">
     <!-- Navigation -->
-    <NavHeader />
+    <NavHeader v-if="!isAdminPage" />
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content" :class="{ 'no-header': isAdminPage }">
       <router-view v-slot="{ Component }">
         <Transition name="slide" mode="out-in">
           <component :is="Component" />
@@ -31,10 +37,10 @@ onMounted(() => {
     </main>
 
     <!-- Footer -->
-    <SiteFooter />
+    <SiteFooter v-if="!isAdminPage" />
 
     <!-- Reading Tools -->
-    <ReadingTools />
+    <ReadingTools v-if="!isAdminPage" />
   </div>
 </template>
 
@@ -51,6 +57,10 @@ onMounted(() => {
 .main-content {
   flex: 1;
   width: 100%;
+
+  &.no-header {
+    margin-top: 0;
+  }
 }
 
 /* Page Transition Animation */

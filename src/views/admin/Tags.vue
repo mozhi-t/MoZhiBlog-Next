@@ -13,12 +13,6 @@
         placeholder="请输入新标签名称"
         @keyup.enter="handleAdd"
       />
-      <input
-        v-model="newTagColor"
-        type="color"
-        class="color-picker"
-        title="选择标签颜色"
-      />
       <button class="add-btn" @click="handleAdd" :disabled="!newTagName.trim()">
         新增标签
       </button>
@@ -30,15 +24,9 @@
         v-for="tag in tags"
         :key="tag.id"
         class="tag-card"
-        :style="{ '--tag-color': tag.color || '#007AFF' }"
       >
         <div class="tag-info">
           <span class="tag-name">{{ tag.name }}</span>
-          <span
-            class="tag-color-preview"
-            :style="{ background: tag.color || '#007AFF' }"
-          ></span>
-          <span class="tag-meta">{{ tag.article_count || 0 }} 篇文章</span>
         </div>
         <div class="tag-actions">
           <button class="action-btn edit" @click="handleEdit(tag)">编辑</button>
@@ -74,22 +62,6 @@
               placeholder="请输入标签名称"
             />
           </div>
-          <div class="form-group">
-            <label>标签颜色</label>
-            <div class="color-input-group">
-              <input
-                v-model="editColor"
-                type="color"
-                class="color-picker"
-              />
-              <input
-                v-model="editColor"
-                type="text"
-                class="form-input color-text"
-                placeholder="#007AFF"
-              />
-            </div>
-          </div>
         </div>
 
         <div class="modal-footer">
@@ -109,18 +81,16 @@ import { tagApi } from '@/api'
 
 const tags = ref([])
 const newTagName = ref('')
-const newTagColor = ref('#007AFF')
 const showModal = ref(false)
 const editingId = ref(null)
 const editName = ref('')
-const editColor = ref('#007AFF')
 const submitting = ref(false)
 
 // 加载标签列表
 const loadTags = async () => {
   try {
-    const res = await tagApi.all({ page: 1, size: 100 })
-    tags.value = res.data.items || []
+    const res = await tagApi.list()
+    tags.value = res.data || []
   } catch (error) {
     console.error('加载标签失败:', error)
   }
@@ -131,9 +101,8 @@ const handleAdd = async () => {
   if (!name) return
 
   try {
-    await tagApi.create({ name, color: newTagColor.value })
+    await tagApi.create({ name })
     newTagName.value = ''
-    newTagColor.value = '#007AFF'
     loadTags()
   } catch (error) {
     console.error('添加标签失败:', error)
@@ -144,7 +113,6 @@ const handleAdd = async () => {
 const handleEdit = (tag) => {
   editingId.value = tag.id
   editName.value = tag.name
-  editColor.value = tag.color || '#007AFF'
   showModal.value = true
 }
 
@@ -154,7 +122,7 @@ const handleUpdate = async () => {
 
   submitting.value = true
   try {
-    await tagApi.update(editingId.value, { name, color: editColor.value })
+    await tagApi.update(editingId.value, { name })
     showModal.value = false
     loadTags()
   } catch (error) {
@@ -225,36 +193,6 @@ onMounted(() => {
   }
 }
 
-.color-picker {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  background: transparent;
-
-  &::-webkit-color-swatch-wrapper {
-    padding: 4px;
-  }
-
-  &::-webkit-color-swatch {
-    border: none;
-    border-radius: var(--radius-md);
-  }
-}
-
-.color-input-group {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: center;
-
-  .color-text {
-    flex: 1;
-    max-width: 120px;
-  }
-}
-
 .add-btn {
   padding: var(--spacing-md) var(--spacing-xl);
   font-size: var(--font-size-sm);
@@ -291,7 +229,6 @@ onMounted(() => {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
   transition: all var(--transition-base);
-  border-left: 4px solid var(--tag-color);
 
   &:hover {
     box-shadow: var(--shadow-md);
@@ -308,12 +245,6 @@ onMounted(() => {
   font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--color-text-primary);
-}
-
-.tag-color-preview {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
 }
 
 .tag-meta {
