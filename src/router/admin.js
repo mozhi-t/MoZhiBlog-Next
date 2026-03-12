@@ -28,6 +28,18 @@ const routes = [
         meta: { title: '文章管理', requiresAuth: true }
       },
       {
+        path: 'articles/new',
+        name: 'ArticleNew',
+        component: () => import('../views/admin/ArticleEditor.vue'),
+        meta: { title: '新增文章', requiresAuth: true }
+      },
+      {
+        path: 'articles/:id/edit',
+        name: 'ArticleEdit',
+        component: () => import('../views/admin/ArticleEditor.vue'),
+        meta: { title: '编辑文章', requiresAuth: true }
+      },
+      {
         path: 'categories',
         name: 'Categories',
         component: () => import('../views/admin/Categories.vue'),

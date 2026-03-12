@@ -83,92 +83,15 @@
         @click="page++; loadArticles()"
       >下一页</button>
     </div>
-
-    <!-- 编辑弹窗 -->
-    <div class="modal-overlay" v-if="showModal" @click.self="showModal = false">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>{{ editingId ? '编辑文章' : '新增文章' }}</h2>
-          <button class="close-btn" @click="showModal = false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <div class="form-group">
-            <label>标题</label>
-            <input v-model="form.title" type="text" class="form-input" placeholder="请输入文章标题" />
-          </div>
-
-          <div class="form-group">
-            <label>摘要</label>
-            <textarea v-model="form.summary" class="form-textarea" placeholder="请输入文章摘要" rows="3"></textarea>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>分类</label>
-              <select v-model="form.category_id" class="form-select">
-                <option :value="null">请选择分类</option>
-                <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-                  {{ cat.name }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label>标签（多选，用逗号分隔ID）</label>
-              <input v-model="form.tags" type="text" class="form-input" placeholder="如: 1,2,3" />
-              <div class="tag-hint">
-                可用标签ID:
-                <span v-for="tag in tags" :key="tag.id" class="tag-id-chip">
-                  {{ tag.id }}:{{ tag.name }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>类型</label>
-              <select v-model="form.type" class="form-select">
-                <option :value="0">文章</option>
-                <option :value="1">说说</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>内容 (Markdown)</label>
-            <div class="editor-container">
-              <textarea
-                v-model="form.content"
-                class="form-editor"
-                placeholder="请输入文章内容 (支持 Markdown)"
-              ></textarea>
-              <div class="preview-pane" v-html="previewContent"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="cancel-btn" @click="showModal = false">取消</button>
-          <button class="submit-btn" @click="handleSubmit" :disabled="submitting">
-            {{ submitting ? '保存中...' : '保存' }}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { marked } from 'marked'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { articleApi, categoryApi, tagApi } from '@/api'
+
+const router = useRouter()
 
 // 数据
 const articles = ref([])
@@ -183,26 +106,16 @@ const filter = reactive({
   tagId: null
 })
 
-const showModal = ref(false)
-const editingId = ref(null)
-const submitting = ref(false)
-
-const form = reactive({
-  title: '',
-  summary: '',
-  content: '',
-  category_id: null,
-  tags: '',
-  type: 0
-})
+const openModal = (article = null) => {
+  if (article) {
+    router.push(`/admin/articles/${article.id}/edit`)
+  } else {
+    router.push('/admin/articles/new')
+  }
+}
 
 // 计算属性
 const totalPages = computed(() => Math.ceil(total.value / size.value))
-
-const previewContent = computed(() => {
-  if (!form.content) return ''
-  return marked(form.content)
-})
 
 // 方法
 const formatDate = (dateStr) => {
@@ -243,58 +156,6 @@ const loadTags = async () => {
     tags.value = res.data
   } catch (error) {
     console.error('加载标签失败:', error)
-  }
-}
-
-const openModal = (article = null) => {
-  if (article) {
-    editingId.value = article.id
-    form.title = article.title
-    form.summary = article.summary || ''
-    form.content = article.content
-    form.category_id = article.category_id
-    form.tags = article.tags || ''
-    form.type = article.type || 0
-  } else {
-    editingId.value = null
-    form.title = ''
-    form.summary = ''
-    form.content = ''
-    form.category_id = null
-    form.tags = ''
-    form.type = 0
-    form.type = 0
-  }
-  showModal.value = true
-}
-
-const handleSubmit = async () => {
-  if (!form.title || !form.content) return
-
-  submitting.value = true
-  try {
-    const data = {
-      title: form.title,
-      summary: form.summary,
-      content: form.content,
-      category_id: form.category_id,
-      tags: form.tags,
-      type: form.type
-    }
-
-    if (editingId.value) {
-      await articleApi.update(editingId.value, data)
-    } else {
-      await articleApi.create(data)
-    }
-
-    showModal.value = false
-    loadArticles()
-  } catch (error) {
-    console.error('保存文章失败:', error)
-    alert('保存失败: ' + error.message)
-  } finally {
-    submitting.value = false
   }
 }
 
@@ -528,242 +389,5 @@ onMounted(() => {
 .page-info {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-}
-
-// 弹窗样式
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: var(--spacing-lg);
-}
-
-.modal {
-  width: 100%;
-  max-width: 900px;
-  max-height: 90vh;
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-xl);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: modalSlide 0.3s ease;
-}
-
-@keyframes modalSlide {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-bottom: 1px solid var(--color-divider);
-
-  h2 {
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    color: var(--color-text-primary);
-  }
-}
-
-.close-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  transition: all var(--transition-base);
-
-  svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  &:hover {
-    background: var(--color-bg-tertiary);
-    color: var(--color-text-primary);
-  }
-}
-
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-xl);
-}
-
-.form-group {
-  margin-bottom: var(--spacing-lg);
-
-  label {
-    display: block;
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--color-text-primary);
-    margin-bottom: var(--spacing-sm);
-  }
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-lg);
-}
-
-.tag-hint {
-  margin-top: var(--spacing-xs);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-}
-
-.tag-id-chip {
-  display: inline-block;
-  padding: 2px 6px;
-  margin: 2px;
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-}
-
-.form-input,
-.form-textarea,
-.form-select {
-  width: 100%;
-  padding: var(--spacing-md);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  transition: border-color var(--transition-base);
-
-  &:focus {
-    border-color: var(--color-accent);
-  }
-}
-
-.form-textarea {
-  resize: vertical;
-}
-
-.editor-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
-  min-height: 300px;
-}
-
-.form-editor {
-  width: 100%;
-  min-height: 300px;
-  padding: var(--spacing-md);
-  font-size: var(--font-size-sm);
-  font-family: monospace;
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  resize: vertical;
-
-  &:focus {
-    border-color: var(--color-accent);
-  }
-}
-
-.preview-pane {
-  min-height: 300px;
-  padding: var(--spacing-md);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow-y: auto;
-
-  :deep(h1), :deep(h2), :deep(h3) {
-    margin-top: var(--spacing-md);
-    margin-bottom: var(--spacing-sm);
-  }
-
-  :deep(p) {
-    margin-bottom: var(--spacing-sm);
-  }
-
-  :deep(code) {
-    padding: 2px 6px;
-    background: var(--color-bg-tertiary);
-    border-radius: var(--radius-sm);
-    font-family: monospace;
-  }
-
-  :deep(pre) {
-    padding: var(--spacing-md);
-    background: var(--color-bg-tertiary);
-    border-radius: var(--radius-md);
-    overflow-x: auto;
-  }
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-top: 1px solid var(--color-divider);
-}
-
-.cancel-btn,
-.submit-btn {
-  padding: var(--spacing-sm) var(--spacing-xl);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.cancel-btn {
-  color: var(--color-text-secondary);
-  background: var(--color-bg-tertiary);
-  border: none;
-
-  &:hover {
-    background: var(--color-bg-primary);
-  }
-}
-
-.submit-btn {
-  color: #fff;
-  background: var(--color-accent);
-  border: none;
-
-  &:hover:not(:disabled) {
-    background: var(--color-accent-hover);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
 }
 </style>
