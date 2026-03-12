@@ -6,6 +6,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 // 导入后台路由
 import adminRouter from './admin'
+import { useAdminStore } from '@/stores/admin'
 
 const routes = [
   {
@@ -88,8 +89,37 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
+  const adminStore = useAdminStore()
+
+  // 设置页面标题
   document.title = `${to.meta.title || '首页'} | MoZhi Blog`
+
+  // 公开页面直接通过（登录页）
+  if (to.meta.public) {
+    // 如果已登录且访问登录页，重定向到后台首页
+    if (to.path === '/admin/login' && adminStore.token) {
+      return next('/admin/dashboard')
+    }
+    return next()
+  }
+
+  // 需要登录的页面（所有 /admin 下的页面，除了登录页）
+  if (to.path.startsWith('/admin') && to.path !== '/admin/login') {
+    if (!adminStore.token) {
+      return next('/admin/login')
+    }
+
+    // 如果没有管理员信息，先获取
+    if (!adminStore.adminInfo) {
+      try {
+        await adminStore.getInfo()
+      } catch (error) {
+        return next('/admin/login')
+      }
+    }
+  }
+
   next()
 })
 

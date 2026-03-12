@@ -266,6 +266,9 @@ const loadArticle = async () => {
 
     // 加载评论
     loadComments()
+
+    // 添加代码块头部
+    setTimeout(addCodeBlockHeader, 100)
   } catch (error) {
     console.error('加载文章失败:', error)
     notFound.value = true
@@ -403,6 +406,13 @@ watch(() => route.params.id, () => {
   loadArticle()
 })
 
+// 监听文章内容变化，重新添加代码块头部
+watch(article, (newArticle) => {
+  if (newArticle?.content) {
+    setTimeout(addCodeBlockHeader, 100)
+  }
+}, { deep: true })
+
 // 监听标题滚动位置
 let headingObserver = null
 
@@ -448,9 +458,10 @@ const addCodeBlockHeader = () => {
   const codeBlocks = document.querySelectorAll('.content-body pre')
   codeBlocks.forEach(pre => {
     if (pre.parentNode?.classList.contains('code-block-wrapper')) return // 已处理过
-    if (!pre.querySelector('code.hljs')) return // 不是代码块
 
     const codeEl = pre.querySelector('code')
+    if (!codeEl) return // 没有 code 元素
+
     const code = codeEl?.textContent || ''
     // 获取语言
     const langEl = codeEl.classList.value.match(/language-(\S+)/)
@@ -774,6 +785,7 @@ const handleScroll = () => {
   line-height: var(--line-height-relaxed);
   overflow-wrap: break-word;
   word-wrap: break-word;
+  word-break: break-word;
 
   /* ============================================
      Markdown 内容样式 - 苹果风格
@@ -887,6 +899,9 @@ const handleScroll = () => {
     line-height: 1.8;
     margin: 16px 0;
     text-indent: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
 
     @media (max-width: 768px) {
       font-size: 18px;
@@ -983,6 +998,21 @@ const handleScroll = () => {
       0 4px 16px rgba(0, 0, 0, 0.08);
   }
 
+  :deep(.code-block-wrapper pre) {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  :deep(.code-block-wrapper code) {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  :deep(.code-block-wrapper pre code) {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
   :deep(.code-header) {
     display: flex;
     justify-content: space-between;
@@ -990,6 +1020,11 @@ const handleScroll = () => {
     padding: 8px 16px;
     background: var(--color-bg-secondary);
     border-bottom: 1px solid var(--color-border);
+    border-radius: 12px 12px 0 0;
+  }
+
+  :deep(.code-block-wrapper pre) {
+    border-radius: 0 0 12px 12px;
   }
 
   :deep(.code-lang) {
@@ -1037,7 +1072,8 @@ const handleScroll = () => {
     margin: 0;
     overflow-x: auto;
     overflow-y: hidden;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-break: break-all;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
@@ -1048,7 +1084,8 @@ const handleScroll = () => {
     font-size: 14px;
     color: #4a4a4a;
     font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-break: break-all;
     border: 1px solid #d4d4d4;
   }
 
@@ -1058,7 +1095,8 @@ const handleScroll = () => {
     font-size: 14px;
     line-height: 1.6;
     color: var(--color-text-primary);
-    white-space: pre;
+    white-space: pre-wrap;
+    word-break: break-all;
     border: none;
   }
 

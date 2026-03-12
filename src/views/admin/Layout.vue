@@ -1,25 +1,10 @@
 <template>
   <div class="admin-layout" :class="{ collapsed: adminStore.sidebarCollapsed }">
-    <!-- 顶部导航 -->
-    <header class="admin-header">
-      <div class="header-left">
-        <button class="menu-toggle" @click="adminStore.toggleSidebar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
-        <span class="header-title">后台管理</span>
-      </div>
-      <div class="header-right">
-        <span class="admin-name">{{ adminStore.adminInfo?.username }}</span>
-        <button class="logout-btn" @click="handleLogout">退出</button>
-      </div>
-    </header>
-
     <!-- 侧边栏 -->
     <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">后台管理</span>
+      </div>
       <nav class="sidebar-nav">
         <router-link
           v-for="item in menuItems"
@@ -32,6 +17,16 @@
           <span class="nav-text">{{ item.name }}</span>
         </router-link>
       </nav>
+      <div class="sidebar-footer">
+        <button class="logout-btn" @click="handleLogout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>退出登录</span>
+        </button>
+      </div>
     </aside>
 
     <!-- 主内容区 -->
@@ -100,117 +95,43 @@ const handleLogout = () => {
   transition: all var(--transition-smooth);
 }
 
-.admin-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 56px;
-  background: var(--glass-bg-solid);
-  backdrop-filter: var(--glass-blur);
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--spacing-lg);
-  z-index: 100;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.menu-toggle {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  color: var(--color-text-primary);
-  transition: background var(--transition-base);
-
-  svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  &:hover {
-    background: var(--color-bg-tertiary);
-  }
-}
-
-.header-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-}
-
-.admin-name {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.logout-btn {
-  padding: var(--spacing-xs) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  color: var(--color-accent);
-  background: var(--color-accent-light);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-base);
-
-  &:hover {
-    background: var(--color-accent);
-    color: #fff;
-  }
-}
-
 .admin-sidebar {
   position: fixed;
-  top: 56px;
+  top: 0;
   left: 0;
   bottom: 0;
   width: 240px;
   background: var(--glass-bg-solid);
   backdrop-filter: var(--glass-blur);
   border-right: 1px solid var(--color-border);
-  padding: var(--spacing-lg);
-  transition: all var(--transition-smooth);
+  display: flex;
+  flex-direction: column;
   z-index: 90;
-  overflow-y: auto;
 }
 
-.collapsed .admin-sidebar {
-  width: 80px;
-  padding: var(--spacing-lg) var(--spacing-sm);
+.sidebar-header {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
 
-  .nav-text {
-    display: none;
-  }
-
-  .nav-item {
-    justify-content: center;
-    padding: var(--spacing-md);
-  }
+.sidebar-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .sidebar-nav {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+}
+
+.sidebar-footer {
+  padding: var(--spacing-lg);
+  border-top: 1px solid var(--color-border);
 }
 
 .nav-item {
@@ -254,12 +175,56 @@ const handleLogout = () => {
   white-space: nowrap;
 }
 
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+}
+
 .admin-main {
   margin-left: 240px;
-  margin-top: 56px;
   padding: var(--spacing-xl);
-  min-height: calc(100vh - 56px);
+  min-height: 100vh;
   transition: margin-left var(--transition-smooth);
+}
+
+.collapsed .admin-sidebar {
+  width: 80px;
+
+  .sidebar-title,
+  .nav-text,
+  .logout-btn span {
+    display: none;
+  }
+
+  .nav-item {
+    justify-content: center;
+    padding: var(--spacing-md);
+  }
+
+  .logout-btn {
+    justify-content: center;
+  }
 }
 
 .collapsed .admin-main {

@@ -15,6 +15,11 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   config => {
+    // 登录请求不需要携带 token
+    if (config.url === '/admin/login') {
+      return config
+    }
+
     const adminStore = useAdminStore()
     if (adminStore.token) {
       config.headers.Authorization = `Bearer ${adminStore.token}`
