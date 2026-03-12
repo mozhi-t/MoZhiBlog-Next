@@ -1,13 +1,18 @@
 <template>
   <footer class="site-footer" :class="{ visible: isVisible }">
     <div class="footer-content">
+      <p class="site-time">
+        本站已经运行了 {{ runDays }} 天 {{ runHours }} 小时 {{ runMinutes }} 分钟 {{ runSeconds }} 秒
+      </p>
       <p class="copyright">
         &copy; {{ currentYear }} MoZhi. All rights reserved.
       </p>
       <div class="footer-links">
-        <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/mozhi-it" target="_blank" rel="noopener">GitHub</a>
         <span class="divider">·</span>
         <a href="/rss.xml">RSS</a>
+        <span class="divider">·</span>
+        <a href="https://www.lyvps.net" target="_blank" rel="noopener">林柚云</a>
       </div>
     </div>
   </footer>
@@ -18,6 +23,16 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const isVisible = ref(false)
 const currentYear = computed(() => new Date().getFullYear())
+
+// 运行时间计算
+const startDate = new Date('2024-10-08').getTime()
+const runTime = ref(Date.now() - startDate)
+let timer = null
+
+const runDays = computed(() => Math.floor(runTime.value / (1000 * 60 * 60 * 24)))
+const runHours = computed(() => Math.floor((runTime.value % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)))
+const runMinutes = computed(() => Math.floor((runTime.value % (1000 * 60 * 60)) / (1000 * 60)))
+const runSeconds = computed(() => Math.floor((runTime.value % (1000 * 60)) / 1000))
 
 const checkScrollPosition = () => {
   const scrollHeight = document.documentElement.scrollHeight
@@ -31,10 +46,15 @@ const checkScrollPosition = () => {
 onMounted(() => {
   window.addEventListener('scroll', checkScrollPosition, { passive: true })
   checkScrollPosition()
+  // 每秒更新运行时间
+  timer = setInterval(() => {
+    runTime.value = Date.now() - startDate
+  }, 1000)
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', checkScrollPosition)
+  if (timer) clearInterval(timer)
 })
 </script>
 
@@ -63,6 +83,12 @@ onUnmounted(() => {
 }
 
 .copyright {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.site-time {
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
   margin-bottom: var(--spacing-sm);
