@@ -18,11 +18,7 @@ def get_article_comments(
     article_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    获取指定文章的评论列表（公开）
-    """
-    logger.info(f"获取文章评论 - article_id: {article_id}")
-
+    """获取指定文章的评论列表（公开）"""
     article = db.query(Article).filter(Article.id == article_id).first()
     if not article:
         logger.warning(f"文章不存在 - article_id: {article_id}")
@@ -56,10 +52,7 @@ def create_comment(
     comment_data: CommentCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    提交评论（访客填写，无需鉴权）
-    """
-    logger.info(f"提交评论 - article_id: {comment_data.article_id}, nickname: {comment_data.nickname}")
+    """提交评论（访客填写，无需鉴权）"""
 
     article = db.query(Article).filter(Article.id == comment_data.article_id).first()
     if not article:
@@ -157,10 +150,7 @@ def delete_comment(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    """
-    删除评论（需管理员鉴权）
-    """
-    logger.info(f"删除评论 - comment_id: {comment_id}, author: {admin.username}")
+    """删除评论（需管理员鉴权）"""
 
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if not comment:
@@ -183,10 +173,7 @@ def approve_comment(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    """
-    审核评论（需管理员鉴权）
-    """
-    logger.info(f"审核评论 - comment_id: {comment_id}, is_approved: {is_approved}, author: {admin.username}")
+    """审核评论（需管理员鉴权）"""
 
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if not comment:

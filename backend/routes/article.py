@@ -46,7 +46,7 @@ def get_articles(
     type: Optional[int] = Query(None, description="文章类型筛选: 0-文章, 1-说说"),
     db: Session = Depends(get_db)
 ):
-    logger.info(f"获取文章列表 - page: {page}, size: {size}, category_id: {category_id}, tag_id: {tag_id}, type: {type}")
+    """获取文章列表（公开）"""
     query = db.query(Article)
 
     # 分类筛选
@@ -117,7 +117,7 @@ def get_hot_articles(
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
-    logger.info(f"获取热门文章 - limit: {limit}")
+    """获取热门文章（公开）"""
     articles = db.query(Article).order_by(
         desc(Article.read_count)
     ).limit(limit).all()
@@ -136,7 +136,7 @@ def get_hot_articles(
 
 @router.get("/{article_id}")
 def get_article(article_id: int, db: Session = Depends(get_db)):
-    logger.info(f"获取文章详情 - article_id: {article_id}")
+    """获取单篇文章详情（公开）- 访问时阅读量+1"""
 
     article = db.query(Article).filter(Article.id == article_id).first()
     if not article:
@@ -187,7 +187,7 @@ def create_article(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    logger.info(f"创建文章 - title: {article_data.title}, author: {admin.username}")
+    """创建文章（需管理员鉴权）"""
     # 检查分类是否存在
     if article_data.category_id:
         category = db.query(Category).filter(Category.id == article_data.category_id).first()

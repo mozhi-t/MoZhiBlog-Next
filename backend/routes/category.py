@@ -14,10 +14,7 @@ router = APIRouter(prefix="/api/categories", tags=["分类"])
 
 @router.get("")
 def get_categories(db: Session = Depends(get_db)):
-    """
-    获取所有分类列表（公开）
-    """
-    logger.info("获取分类列表")
+    """获取所有分类列表（公开）"""
     categories = db.query(Category).order_by(Category.create_time.desc()).all()
     return {
         "code": 200,
@@ -38,10 +35,7 @@ def create_category(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    """
-    新增分类（需管理员鉴权）
-    """
-    logger.info(f"创建分类 - name: {category_data.name}, author: {admin.username}")
+    """新增分类（需管理员鉴权）"""
 
     existing = db.query(Category).filter(Category.name == category_data.name).first()
     if existing:
