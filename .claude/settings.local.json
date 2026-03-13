@@ -4,7 +4,9 @@
       "Bash(pip install bcrypt==4.0.1)",
       "Bash(python -c:*)",
       "Bash(npm install:*)",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(npm run dev)",
+      "Bash(timeout:*)"
     ]
   }
 }

@@ -35,6 +35,25 @@
             </div>
             <h3 class="author-name">MoZhi</h3>
             <p class="author-bio">远方很远，步履不停，未来可期</p>
+
+            <!-- 统计数据 -->
+            <div class="author-stats">
+              <div class="stat-item">
+                <span class="stat-value">{{ stats.articleCount }}</span>
+                <span class="stat-label">文章</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-value">{{ stats.categoryCount }}</span>
+                <span class="stat-label">分组</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-value">{{ stats.tagCount }}</span>
+                <span class="stat-label">标签</span>
+              </div>
+            </div>
+
             <div class="author-links">
               <a href="https://github.com/mozhi-it" target="_blank" rel="noopener" class="author-btn" title="GitHub">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -91,7 +110,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import ArticleCard from '../components/common/ArticleCard.vue'
 import Pagination from '../components/common/Pagination.vue'
-import { articlesApi } from '../api/frontend'
+import { articlesApi, categoriesApi, tagsApi } from '../api/frontend'
 
 // 问候语数据
 const greetingData = {
@@ -108,8 +127,8 @@ const getTimePeriod = () => {
   const hour = new Date().getHours()
   if (hour >= 5 && hour < 9) return 'morning'
   if (hour >= 9 && hour < 12) return 'noon'
-  if (hour >= 12 && hour < 18) return 'afternoon'
-  if (hour >= 18 && hour < 24) return 'evening'
+  if (hour >= 12 && hour < 20) return 'afternoon'
+  if (hour >= 20 && hour < 24) return 'evening'
   return 'lateNight'
 }
 
@@ -133,7 +152,7 @@ const clickCount = ref(0)
 const isPressing = ref(false)
 const hasEntered = ref(false)
 
-const clickMessages = ['点这里干什么', '怎么还点？', '那你点吧']
+const clickMessages = ['点这里干什么', '怎么还点？', '随你点吧']
 
 const handleCylinderClick = () => {
   if (!hasEntered.value) return
@@ -208,6 +227,13 @@ const currentPage = ref(1)
 const total = ref(0)
 const pageSize = 20
 
+// 统计数据
+const stats = ref({
+  articleCount: 0,
+  categoryCount: 0,
+  tagCount: 0
+})
+
 // 加载文章列表
 const loadArticles = async (page = 1) => {
   try {
@@ -235,6 +261,29 @@ const loadArticles = async (page = 1) => {
   }
 }
 
+// 加载统计数据
+const loadStats = async () => {
+  try {
+    // 并行请求文章、分类、标签数据
+    const [articlesRes, categoriesRes, tagsRes] = await Promise.all([
+      articlesApi.list({ page: 1, size: 1 }), // 只获取总数，不需要详细内容
+      categoriesApi.list(),
+      tagsApi.list()
+    ])
+
+    const categories = Array.isArray(categoriesRes.data) ? categoriesRes.data : []
+    const tags = Array.isArray(tagsRes.data) ? tagsRes.data : []
+
+    stats.value = {
+      articleCount: articlesRes.data.total || 0,
+      categoryCount: categories.length,
+      tagCount: tags.length
+    }
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+  }
+}
+
 const handlePageChange = (page) => {
   loadArticles(page)
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -243,22 +292,16 @@ const handlePageChange = (page) => {
 const startAnimation = () => {
   if (isAnimating.value) return
   isAnimating.value = true
-
-  // 根据文字长度计算显示时间
   const displayTime = currentSubtitle.value.length * 100 + 4000
 
   timer = setTimeout(() => {
     showSubtitle.value = false
 
-    // 等待消失动画完成
     setTimeout(() => {
-      // 切换到下一段文字
       currentSubtitleIndex.value = (currentSubtitleIndex.value + 1) % subtitles.length
       currentSubtitle.value = subtitles[currentSubtitleIndex.value]
       showSubtitle.value = true
       isAnimating.value = false
-
-      // 继续轮播
       startAnimation()
     }, 600)
   }, displayTime)
@@ -267,6 +310,7 @@ const startAnimation = () => {
 onMounted(() => {
   startAnimation()
   loadArticles()
+  loadStats()
   progressTimer = setInterval(updateProgress, 1000)
 })
 
@@ -482,7 +526,44 @@ onUnmounted(() => {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   line-height: var(--line-height-base);
+  margin-bottom: var(--spacing-md);
+}
+
+/* 统计数据 */
+.author-stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-md) 0;
   margin-bottom: var(--spacing-lg);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 var(--spacing-md);
+}
+
+.stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--color-border);
 }
 
 .author-links {

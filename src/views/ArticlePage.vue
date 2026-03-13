@@ -184,7 +184,7 @@ const marked = new Marked(
   }
 )
 
-// 自定义渲染器，给标题添加 id
+// 自定义渲染器
 const renderer = {
   heading({ tokens, depth }) {
     const text = this.parser.parseInline(tokens)
@@ -201,7 +201,6 @@ const readingStore = useReadingStore()
 // Font size
 const fontSize = computed(() => readingStore.currentFontSize)
 
-// 加载状态
 const loading = ref(true)
 const notFound = ref(false)
 
@@ -221,7 +220,7 @@ const article = ref({
 // 计算字数
 const wordCount = computed(() => {
   if (!article.value.content) return 0
-  // 移除 Markdown 语法符号，计算纯文本字数
+  // 计算纯文本字数
   const text = article.value.content
     .replace(/```[\s\S]*?```/g, '') // 移除代码块
     .replace(/`[^`]+`/g, '') // 移除行内代码
