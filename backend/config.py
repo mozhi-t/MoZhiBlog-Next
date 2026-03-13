@@ -31,5 +31,10 @@ class Config:
     # CORS配置
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174').split(',')
 
+    # 日志配置
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+    LOG_DIR = os.getenv('LOG_DIR', None)
+    LOG_BACKUP_COUNT = int(os.getenv('LOG_BACKUP_COUNT', 30))  # 保留天数
+
 
 config = Config()

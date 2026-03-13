@@ -7,7 +7,15 @@ from fastapi.responses import JSONResponse
 
 from config import config
 from models import create_tables
+from logger import setup_logger, logger
 from routes import admin_router, article_router, category_router, comment_router, friendlink_router, tag_router, messageboard_router
+
+# 初始化日志配置
+logger = setup_logger(
+    log_level=config.LOG_LEVEL,
+    log_dir=config.LOG_DIR,
+    backup_count=config.LOG_BACKUP_COUNT
+)
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -31,6 +39,7 @@ app.add_middleware(
 # 统一异常处理
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception(f"服务器内部错误: {str(exc)}")
     return JSONResponse(
         status_code=500,
         content={
@@ -62,10 +71,10 @@ def root():
 async def startup_event():
     try:
         create_tables()
-        print("数据库表初始化完成!")
+        logger.info("数据库表初始化完成!")
     except Exception as e:
-        print(f"数据库连接失败: {e}")
-        print("请检查数据库配置并确保MySQL服务已启动")
+        logger.error(f"数据库连接失败: {e}")
+        logger.warning("请检查数据库配置并确保MySQL服务已启动")
 
 
 if __name__ == "__main__":
