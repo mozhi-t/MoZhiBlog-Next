@@ -18,7 +18,7 @@ const isAdminPage = computed(() => route.path.startsWith('/admin'))
 // Initialize stores on mount
 onMounted(() => {
   themeStore.initTheme()
-  readingStore.initFontSize()
+  readingStore.initAll()
 })
 </script>
 
