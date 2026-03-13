@@ -68,6 +68,12 @@ const routes = [
         name: 'Messages',
         component: () => import('../views/admin/Messages.vue'),
         meta: { title: '留言管理', requiresAuth: true }
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('../views/admin/Settings.vue'),
+        meta: { title: '设置', requiresAuth: true }
       }
     ]
   }

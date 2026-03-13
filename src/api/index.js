@@ -59,7 +59,8 @@ export default api
 export const adminApi = {
   login: (data) => api.post('/admin/login', data),
   getInfo: () => api.get('/admin/me'),
-  logout: () => api.post('/admin/logout')
+  logout: () => api.post('/admin/logout'),
+  updateSettings: (data) => api.put('/admin/settings', data)
 }
 
 // 文章

@@ -40,6 +40,19 @@ class TokenResponse(BaseModel):
     admin: AdminResponse
 
 
+class AdminUpdate(BaseModel):
+    """修改管理员信息请求"""
+    current_password: str = Field(..., min_length=1, description="当前密码")
+    new_username: Optional[str] = Field(None, min_length=1, max_length=50, description="新用户名，不修改则为空")
+    new_password: Optional[str] = Field(None, min_length=1, description="新密码，不修改则为空")
+
+
+class AdminUpdateResponse(BaseModel):
+    """修改管理员信息响应"""
+    token: Optional[str] = None
+    admin: AdminResponse
+
+
 # ==================== 文章 ====================
 
 class ArticleCreate(BaseModel):
