@@ -12,12 +12,12 @@ from schemas import (
     ArticleDetailResponse, Response, PaginatedResponse
 )
 from auth import get_current_admin
+from logger import logger
 
 router = APIRouter(prefix="/api/articles", tags=["文章"])
 
 
 def get_tags_from_ids(tags_str: str, db: Session):
-    """从逗号分隔的ID字符串获取标签列表"""
     if not tags_str:
         return []
 
@@ -30,7 +30,6 @@ def get_tags_from_ids(tags_str: str, db: Session):
 
 
 def parse_tags_for_filter(tags_str: str):
-    """解析标签筛选参数"""
     if not tags_str:
         return None
     # 支持逗号分隔的多个标签ID
@@ -47,16 +46,14 @@ def get_articles(
     type: Optional[int] = Query(None, description="文章类型筛选: 0-文章, 1-说说"),
     db: Session = Depends(get_db)
 ):
-    """
-    获取文章列表（公开）
-    """
+    logger.info(f"获取文章列表 - page: {page}, size: {size}, category_id: {category_id}, tag_id: {tag_id}, type: {type}")
     query = db.query(Article)
 
     # 分类筛选
     if category_id:
         query = query.filter(Article.category_id == category_id)
 
-    # 标签筛选（支持多标签，用逗号分隔）
+    # 标签筛选
     if tag_id:
         # 筛选包含指定标签的文章
         query = query.filter(Article.tags.contains(str(tag_id)))
@@ -120,9 +117,7 @@ def get_hot_articles(
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db)
 ):
-    """
-    获取热门文章（公开）
-    """
+    logger.info(f"获取热门文章 - limit: {limit}")
     articles = db.query(Article).order_by(
         desc(Article.read_count)
     ).limit(limit).all()
@@ -141,12 +136,11 @@ def get_hot_articles(
 
 @router.get("/{article_id}")
 def get_article(article_id: int, db: Session = Depends(get_db)):
-    """
-    获取单篇文章详情（公开）
-    - 访问时阅读量+1
-    """
+    logger.info(f"获取文章详情 - article_id: {article_id}")
+
     article = db.query(Article).filter(Article.id == article_id).first()
     if not article:
+        logger.warning(f"文章不存在 - article_id: {article_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文章不存在"
@@ -187,16 +181,13 @@ def get_article(article_id: int, db: Session = Depends(get_db)):
 
 
 # ==================== 管理员接口 ====================
-
 @router.post("")
 def create_article(
     article_data: ArticleCreate,
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    """
-    发布新文章（需管理员鉴权）
-    """
+    logger.info(f"创建文章 - title: {article_data.title}, author: {admin.username}")
     # 检查分类是否存在
     if article_data.category_id:
         category = db.query(Category).filter(Category.id == article_data.category_id).first()
@@ -259,11 +250,11 @@ def update_article(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    """
-    编辑文章（需管理员鉴权）
-    """
+    logger.info(f"更新文章 - article_id: {article_id}, author: {admin.username}")
+
     article = db.query(Article).filter(Article.id == article_id).first()
     if not article:
+        logger.warning(f"文章不存在 - article_id: {article_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文章不存在"
@@ -315,11 +306,11 @@ def delete_article(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    """
-    删除文章（需管理员鉴权）
-    """
+    logger.info(f"删除文章 - article_id: {article_id}, author: {admin.username}")
+
     article = db.query(Article).filter(Article.id == article_id).first()
     if not article:
+        logger.warning(f"文章不存在 - article_id: {article_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文章不存在"

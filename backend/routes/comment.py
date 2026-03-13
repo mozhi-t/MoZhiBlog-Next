@@ -8,6 +8,7 @@ from sqlalchemy import desc
 from models import Comment, Article, get_db
 from schemas import CommentCreate
 from auth import get_current_admin
+from logger import logger
 
 router = APIRouter(prefix="/api/comments", tags=["评论"])
 
@@ -20,8 +21,11 @@ def get_article_comments(
     """
     获取指定文章的评论列表（公开）
     """
+    logger.info(f"获取文章评论 - article_id: {article_id}")
+
     article = db.query(Article).filter(Article.id == article_id).first()
     if not article:
+        logger.warning(f"文章不存在 - article_id: {article_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文章不存在"
@@ -55,8 +59,11 @@ def create_comment(
     """
     提交评论（访客填写，无需鉴权）
     """
+    logger.info(f"提交评论 - article_id: {comment_data.article_id}, nickname: {comment_data.nickname}")
+
     article = db.query(Article).filter(Article.id == comment_data.article_id).first()
     if not article:
+        logger.warning(f"文章不存在 - article_id: {comment_data.article_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文章不存在"
@@ -101,6 +108,7 @@ def get_all_comments(
     """
     获取所有评论（需管理员鉴权）
     """
+    logger.info(f"获取所有评论 - page: {page}, size: {size}, is_approved: {is_approved}")
     query = db.query(Comment)
 
     if is_approved is not None:
@@ -152,8 +160,11 @@ def delete_comment(
     """
     删除评论（需管理员鉴权）
     """
+    logger.info(f"删除评论 - comment_id: {comment_id}, author: {admin.username}")
+
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if not comment:
+        logger.warning(f"评论不存在 - comment_id: {comment_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="评论不存在"
@@ -175,8 +186,11 @@ def approve_comment(
     """
     审核评论（需管理员鉴权）
     """
+    logger.info(f"审核评论 - comment_id: {comment_id}, is_approved: {is_approved}, author: {admin.username}")
+
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if not comment:
+        logger.warning(f"评论不存在 - comment_id: {comment_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="评论不存在"

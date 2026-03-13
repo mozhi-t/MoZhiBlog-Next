@@ -10,6 +10,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from config import config
 from models import Admin, get_db
+from logger import logger
 
 # 密码加密上下文
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -47,11 +48,13 @@ def decode_token(token: str) -> dict:
         payload = jwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
+        logger.warning("Token已过期")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token已过期"
         )
-    except jwt.JWTError:
+    except jwt.JWTError as e:
+        logger.warning(f"无效的Token: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="无效的Token"
@@ -69,6 +72,7 @@ async def get_current_admin(
     payload = decode_token(token)
     username = payload.get("sub")
     if not username:
+        logger.warning("无效的Token载荷")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="无效的Token载荷"
@@ -77,11 +81,13 @@ async def get_current_admin(
     # 查询管理员
     admin = db.query(Admin).filter(Admin.username == username).first()
     if not admin:
+        logger.warning(f"管理员不存在 - username: {username}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="管理员不存在"
         )
 
+    logger.debug(f"管理员鉴权成功 - username: {admin.username}")
     return admin
 
 

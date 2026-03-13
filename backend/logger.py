@@ -1,6 +1,5 @@
 """
 Logger - 日志配置模块
-提供同时输出到控制台和按天分割的日志文件功能
 """
 import os
 import sys
@@ -45,13 +44,13 @@ def setup_logger(
 
     # 定义日志格式
     file_formatter = logging.Formatter(
-        fmt="%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s - %(funcName)s:%(lineno)d - %(message)s",
+        fmt="%(asctime)s.%(msecs)03d [%(levelname)s] %(filename)s - %(funcName)s:%(lineno)d - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
 
     # 控制台日志格式
     console_formatter = logging.Formatter(
-        fmt="[%(levelname)s] %(name)s - %(message)s",
+        fmt="[%(levelname)s] %(filename)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
 

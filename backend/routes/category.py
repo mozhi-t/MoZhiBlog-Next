@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from models import Category, get_db
 from schemas import CategoryCreate, CategoryUpdate
 from auth import get_current_admin
+from logger import logger
 
 router = APIRouter(prefix="/api/categories", tags=["分类"])
 
@@ -16,6 +17,7 @@ def get_categories(db: Session = Depends(get_db)):
     """
     获取所有分类列表（公开）
     """
+    logger.info("获取分类列表")
     categories = db.query(Category).order_by(Category.create_time.desc()).all()
     return {
         "code": 200,
@@ -39,8 +41,11 @@ def create_category(
     """
     新增分类（需管理员鉴权）
     """
+    logger.info(f"创建分类 - name: {category_data.name}, author: {admin.username}")
+
     existing = db.query(Category).filter(Category.name == category_data.name).first()
     if existing:
+        logger.warning(f"分类名称已存在 - name: {category_data.name}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="分类名称已存在"
@@ -72,8 +77,11 @@ def update_category(
     """
     编辑分类（需管理员鉴权）
     """
+    logger.info(f"更新分类 - category_id: {category_id}, author: {admin.username}")
+
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
+        logger.warning(f"分类不存在 - category_id: {category_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="分类不存在"
@@ -82,6 +90,7 @@ def update_category(
     if category_data.name and category_data.name != category.name:
         existing = db.query(Category).filter(Category.name == category_data.name).first()
         if existing:
+            logger.warning(f"分类名称已存在 - name: {category_data.name}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="分类名称已存在"
@@ -111,14 +120,18 @@ def delete_category(
     """
     删除分类（需管理员鉴权）
     """
+    logger.info(f"删除分类 - category_id: {category_id}, author: {admin.username}")
+
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
+        logger.warning(f"分类不存在 - category_id: {category_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="分类不存在"
         )
 
     if category.articles:
+        logger.warning(f"该分类下有文章，无法删除 - category_id: {category_id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="该分类下有文章，无法删除"

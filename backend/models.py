@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, SmallInteger
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from config import config
+from logger import logger
 
 # 创建数据库引擎
 engine = create_engine(config.DATABASE_URL, echo=False, pool_pre_ping=True)
@@ -17,7 +18,6 @@ Base = declarative_base()
 
 
 def get_db():
-    """获取数据库会话"""
     db = SessionLocal()
     try:
         yield db
@@ -26,9 +26,7 @@ def get_db():
 
 
 # ==================== Models ====================
-
 class Admin(Base):
-    """管理员表"""
     __tablename__ = 'admin'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -42,7 +40,6 @@ class Admin(Base):
 
 
 class Category(Base):
-    """分类表"""
     __tablename__ = 'category'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -57,7 +54,6 @@ class Category(Base):
 
 
 class Tag(Base):
-    """标签表"""
     __tablename__ = 'tag'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -69,7 +65,6 @@ class Tag(Base):
 
 
 class Article(Base):
-    """文章表"""
     __tablename__ = 'article'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -77,13 +72,12 @@ class Article(Base):
     summary = Column(String(500), nullable=True)
     content = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey('category.id'), nullable=True)
-    tags = Column(String(200), nullable=True)  # 标签ID列表，用逗号分隔，如 "1,2,3"
-    type = Column(SmallInteger, default=0)  # 文章类型: 0-文章, 1-说说
+    tags = Column(String(200), nullable=True)  # 标签ID列表
+    type = Column(SmallInteger, default=0)  # 文章类型(目前暂时用不到这个字段)
     read_count = Column(Integer, default=0)
     create_time = Column(DateTime, default=datetime.now)
     update_time = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    # 关联
     category = relationship('Category', back_populates='articles')
     comments = relationship('Comment', back_populates='article', cascade='all, delete-orphan')
 
@@ -92,7 +86,6 @@ class Article(Base):
 
 
 class Comment(Base):
-    """评论表"""
     __tablename__ = 'comment'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -111,7 +104,6 @@ class Comment(Base):
 
 
 class FriendLink(Base):
-    """友链表"""
     __tablename__ = 'friend_link'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -129,7 +121,6 @@ class FriendLink(Base):
 
 
 class Blacklist(Base):
-    """IP黑名单表"""
     __tablename__ = 'blacklist'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -142,7 +133,6 @@ class Blacklist(Base):
 
 
 class MessageBoard(Base):
-    """留言板表"""
     __tablename__ = 'message_board'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -157,11 +147,10 @@ class MessageBoard(Base):
 
 
 # ==================== Create Tables ====================
-
 def create_tables():
-    """创建所有表"""
+    logger.info("开始创建数据库表...")
     Base.metadata.create_all(bind=engine)
-    print("数据库表创建成功!")
+    logger.info("数据库表创建成功!")
 
 
 if __name__ == '__main__':
