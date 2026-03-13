@@ -63,6 +63,8 @@ class ArticleCreate(BaseModel):
     category_id: Optional[int] = None
     tags: Optional[str] = Field(None, description="标签ID列表，用逗号分隔，如 '1,2,3'")
     type: int = Field(0, description="文章类型: 0-文章, 1-说说")
+    create_time: Optional[datetime] = Field(None, description="创建时间")
+    update_time: Optional[datetime] = Field(None, description="更新时间")
 
 
 class ArticleUpdate(BaseModel):
@@ -73,6 +75,8 @@ class ArticleUpdate(BaseModel):
     category_id: Optional[int] = None
     tags: Optional[str] = Field(None, description="标签ID列表，用逗号分隔，如 '1,2,3'")
     type: Optional[int] = Field(None, description="文章类型: 0-文章, 1-说说")
+    create_time: Optional[datetime] = Field(None, description="创建时间")
+    update_time: Optional[datetime] = Field(None, description="更新时间")
 
 
 class ArticleListResponse(BaseModel):

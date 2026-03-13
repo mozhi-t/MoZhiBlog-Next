@@ -225,15 +225,11 @@ const loadArticle = async () => {
 }
 
 // 格式化时间为 datetime-local 输入框格式
+// 后端返回的是本地时间字符串（如 "2024-03-12T00:00:00"），直接截取即可
 const formatDateForInput = (dateStr) => {
   if (!dateStr) return ''
-  const date = new Date(dateStr)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day}T${hours}:${minutes}`
+  // 直接处理字符串，去掉可能的 Z 后缀，截取到分钟
+  return dateStr.replace('Z', '').slice(0, 16)
 }
 
 // 返回列表
@@ -267,15 +263,16 @@ const handleSubmit = async () => {
       summary: form.summary,
       content: form.content,
       category_id: form.category_id,
-      tag_ids: form.tag_ids
+      tags: form.tag_ids.length > 0 ? form.tag_ids.join(',') : ''
     }
 
     // 如果填写了时间，则添加到请求中
+    // 直接使用 datetime-local 的值，不再转换为 ISO 格式
     if (form.create_time) {
-      data.create_time = new Date(form.create_time).toISOString()
+      data.create_time = form.create_time
     }
     if (form.update_time) {
-      data.update_time = new Date(form.update_time).toISOString()
+      data.update_time = form.update_time
     }
 
     if (isEditing.value) {

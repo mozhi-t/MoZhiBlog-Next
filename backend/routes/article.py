@@ -215,7 +215,9 @@ def create_article(
         category_id=article_data.category_id,
         tags=article_data.tags,
         type=article_data.type,
-        read_count=0
+        read_count=0,
+        create_time=article_data.create_time,
+        update_time=article_data.update_time
     )
     db.add(article)
     db.commit()
