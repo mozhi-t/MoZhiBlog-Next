@@ -6,7 +6,9 @@
       "Bash(npm install:*)",
       "Bash(npm run build)",
       "Bash(npm run dev)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)"
     ]
   }
 }

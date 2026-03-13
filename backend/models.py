@@ -76,7 +76,7 @@ class Article(Base):
     type = Column(SmallInteger, default=0)  # 文章类型(目前暂时用不到这个字段)
     read_count = Column(Integer, default=0)
     create_time = Column(DateTime, default=datetime.now)
-    update_time = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    update_time = Column(DateTime, default=datetime.now)
 
     category = relationship('Category', back_populates='articles')
     comments = relationship('Comment', back_populates='article', cascade='all, delete-orphan')
