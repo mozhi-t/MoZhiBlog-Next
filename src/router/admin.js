@@ -46,12 +46,6 @@ const routes = [
         meta: { title: '分类管理', requiresAuth: true }
       },
       {
-        path: 'comments',
-        name: 'Comments',
-        component: () => import('../views/admin/Comments.vue'),
-        meta: { title: '评论管理', requiresAuth: true }
-      },
-      {
         path: 'tags',
         name: 'Tags',
         component: () => import('../views/admin/Tags.vue'),
@@ -62,12 +56,6 @@ const routes = [
         name: 'FriendLinks',
         component: () => import('../views/admin/FriendLinks.vue'),
         meta: { title: '友链管理', requiresAuth: true }
-      },
-      {
-        path: 'messages',
-        name: 'Messages',
-        component: () => import('../views/admin/Messages.vue'),
-        meta: { title: '留言管理', requiresAuth: true }
       },
       {
         path: 'settings',

@@ -18,18 +18,6 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon comments">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{{ stats.totalComments }}</span>
-          <span class="stat-label">评论总数</span>
-        </div>
-      </div>
-
-      <div class="stat-card">
         <div class="stat-icon links">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
@@ -72,38 +60,21 @@
           <div v-if="!recentArticles.length" class="empty-tip">暂无文章</div>
         </div>
       </div>
-
-      <div class="recent-card">
-        <h3 class="card-title">最近评论</h3>
-        <div class="recent-list">
-          <div
-            v-for="comment in recentComments"
-            :key="comment.id"
-            class="recent-item"
-          >
-            <span class="item-title">{{ comment.nickname }}</span>
-            <span class="item-content">{{ comment.content }}</span>
-          </div>
-          <div v-if="!recentComments.length" class="empty-tip">暂无评论</div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { articleApi, commentApi, friendLinkApi } from '@/api'
+import { articleApi, friendLinkApi } from '@/api'
 
 const stats = ref({
   totalArticles: 0,
-  totalComments: 0,
   totalFriendLinks: 0,
   totalTags: 0
 })
 
 const recentArticles = ref([])
-const recentComments = ref([])
 
 const loadData = async () => {
   try {
@@ -119,11 +90,6 @@ const loadData = async () => {
     // 加载友链
     const linksRes = await friendLinkApi.list()
     stats.value.totalFriendLinks = linksRes.data.length
-
-    // 加载评论
-    const commentsRes = await commentApi.all({ page: 1, size: 5 })
-    stats.value.totalComments = commentsRes.data.total
-    recentComments.value = commentsRes.data.items
   } catch (error) {
     console.error('加载数据失败:', error)
   }

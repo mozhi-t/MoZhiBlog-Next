@@ -79,28 +79,9 @@ class Article(Base):
     update_time = Column(DateTime, default=datetime.now)
 
     category = relationship('Category', back_populates='articles')
-    comments = relationship('Comment', back_populates='article', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<Article {self.title}>"
-
-
-class Comment(Base):
-    __tablename__ = 'comment'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    article_id = Column(Integer, ForeignKey('article.id'), nullable=False)
-    nickname = Column(String(50), nullable=False)
-    email = Column(String(100), nullable=True)
-    content = Column(String(1000), nullable=False)
-    create_time = Column(DateTime, default=datetime.now)
-    is_approved = Column(SmallInteger, default=1)
-
-    # 关联
-    article = relationship('Article', back_populates='comments')
-
-    def __repr__(self):
-        return f"<Comment {self.id} - {self.nickname}>"
 
 
 class FriendLink(Base):
@@ -130,20 +111,6 @@ class Blacklist(Base):
 
     def __repr__(self):
         return f"<Blacklist {self.ip}>"
-
-
-class MessageBoard(Base):
-    __tablename__ = 'message_board'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    nickname = Column(String(50), nullable=False)
-    email = Column(String(100), nullable=True)
-    content = Column(String(1000), nullable=False)
-    create_time = Column(DateTime, default=datetime.now)
-    is_show = Column(SmallInteger, default=1)
-
-    def __repr__(self):
-        return f"<MessageBoard {self.id} - {self.nickname}>"
 
 
 # ==================== Create Tables ====================

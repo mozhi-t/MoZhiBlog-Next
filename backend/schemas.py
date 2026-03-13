@@ -175,40 +175,6 @@ class TagResponse(BaseModel):
         from_attributes = True
 
 
-# ==================== 评论 ====================
-
-class CommentCreate(BaseModel):
-    """创建评论请求"""
-    article_id: int
-    nickname: str = Field(..., min_length=1, max_length=50)
-    email: Optional[str] = Field(None, max_length=100)
-    content: str = Field(..., min_length=1, max_length=1000)
-
-
-class CommentResponse(BaseModel):
-    """评论响应"""
-    id: int
-    article_id: int
-    nickname: str
-    email: Optional[str] = None
-    content: str
-    create_time: datetime
-    is_approved: int
-    article: Optional['ArticleSimple'] = None
-
-    class Config:
-        from_attributes = True
-
-
-class ArticleSimple(BaseModel):
-    """简单文章（用于嵌套）"""
-    id: int
-    title: str
-
-    class Config:
-        from_attributes = True
-
-
 # ==================== 友链 ====================
 
 class FriendLinkCreate(BaseModel):
@@ -240,36 +206,6 @@ class FriendLinkResponse(BaseModel):
     create_time: datetime
     is_show: int
     weight: int = 2
-
-    class Config:
-        from_attributes = True
-
-
-# ==================== 留言板 ====================
-
-class MessageBoardCreate(BaseModel):
-    """创建留言请求"""
-    nickname: str = Field(..., min_length=1, max_length=50)
-    email: Optional[str] = Field(None, max_length=100)
-    content: str = Field(..., min_length=1, max_length=1000)
-
-
-class MessageBoardUpdate(BaseModel):
-    """更新留言请求"""
-    nickname: Optional[str] = Field(None, min_length=1, max_length=50)
-    email: Optional[str] = Field(None, max_length=100)
-    content: Optional[str] = Field(None, min_length=1, max_length=1000)
-    is_show: Optional[int] = None
-
-
-class MessageBoardResponse(BaseModel):
-    """留言响应"""
-    id: int
-    nickname: str
-    email: Optional[str] = None
-    content: str
-    create_time: datetime
-    is_show: int
 
     class Config:
         from_attributes = True

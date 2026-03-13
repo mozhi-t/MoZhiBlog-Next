@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from config import config
-from models import Base, Admin, Category, Tag, Article, Comment, FriendLink, Blacklist, MessageBoard
+from models import Base, Admin, Category, Tag, Article, FriendLink, Blacklist
 from auth import get_password_hash
 
 # 创建数据库引擎
@@ -996,45 +996,7 @@ Markdown 是技术文档的标配。
         session.flush()
         print(f"✓ 插入 {len(articles_data)} 篇文章")
 
-        # 5. 插入评论
-        comments_data = [
-            {
-                "article_id": 1,
-                "nickname": "前端小白",
-                "email": "xiaobai@example.com",
-                "content": "这篇文章讲得很清楚，Composition API 确实很好用！",
-                "is_approved": 1
-            },
-            {
-                "article_id": 2,
-                "nickname": "设计师阿花",
-                "email": "designer@example.com",
-                "content": "苹果的设计哲学确实值得学习，文中提到的几点我都深有感触。",
-                "is_approved": 1
-            },
-            {
-                "article_id": 3,
-                "nickname": "程序员小王",
-                "email": "wang@example.com",
-                "content": "时间管理确实很重要，感谢分享！",
-                "is_approved": 1
-            }
-        ]
-
-        for comment_data in comments_data:
-            comment = Comment(
-                article_id=comment_data["article_id"],
-                nickname=comment_data["nickname"],
-                email=comment_data["email"],
-                content=comment_data["content"],
-                create_time=datetime.now(),
-                is_approved=comment_data["is_approved"]
-            )
-            session.add(comment)
-
-        print(f"✓ 插入 {len(comments_data)} 条评论")
-
-        # 6. 插入友链
+        # 5. 插入友链
         friendlinks_data = [
             {
                 "username": "张三的技术博客",
@@ -1091,40 +1053,6 @@ Markdown 是技术文档的标配。
             session.add(link)
 
         print(f"✓ 插入 {len(friendlinks_data)} 个友链")
-
-        # 7. 插入留言板
-        messages_data = [
-            {
-                "nickname": "前端开发者",
-                "email": "frontend@example.com",
-                "content": "博客主题非常简洁很喜欢，支持一下！",
-                "is_show": 1
-            },
-            {
-                "nickname": "路过的访客",
-                "email": "visitor@example.com",
-                "content": "文章写得很好，学到了很多知识",
-                "is_show": 1
-            },
-            {
-                "nickname": "技术爱好者",
-                "email": "tech@example.com",
-                "content": "期待作者更多关于Vue3的教程",
-                "is_show": 1
-            }
-        ]
-
-        for msg_data in messages_data:
-            message = MessageBoard(
-                nickname=msg_data["nickname"],
-                email=msg_data["email"],
-                content=msg_data["content"],
-                create_time=datetime.now(),
-                is_show=msg_data["is_show"]
-            )
-            session.add(message)
-
-        print(f"✓ 插入 {len(messages_data)} 条留言")
 
         # 提交所有更改
         session.commit()

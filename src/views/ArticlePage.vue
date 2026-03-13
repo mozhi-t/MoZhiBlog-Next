@@ -99,49 +99,8 @@
     <!-- Comments Section -->
     <section class="comments-section">
       <h3 class="comments-title">评论</h3>
-
-      <!-- Comment Form -->
-      <div class="comment-form">
-        <div class="form-row">
-          <input
-            v-model="commentForm.nickname"
-            type="text"
-            placeholder="昵称 *"
-            class="comment-input"
-          />
-          <input
-            v-model="commentForm.email"
-            type="email"
-            placeholder="邮箱（选填）"
-            class="comment-input"
-          />
-        </div>
-        <textarea
-          v-model="commentForm.content"
-          placeholder="写下你的评论... *"
-          class="comment-textarea"
-          rows="4"
-        ></textarea>
-        <div class="form-footer">
-          <span v-if="commentError" class="error-text">{{ commentError }}</span>
-          <button class="submit-btn" @click="submitComment" :disabled="submitting">
-            {{ submitting ? '提交中...' : '提交评论' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Comments List -->
-      <div class="comments-list">
-        <div v-for="comment in comments" :key="comment.id" class="comment-item">
-          <div class="comment-header">
-            <span class="comment-author">{{ comment.nickname }}</span>
-            <span class="comment-time">{{ formatDate(comment.date) }}</span>
-          </div>
-          <p class="comment-content">{{ comment.content }}</p>
-        </div>
-        <div v-if="comments.length === 0" class="no-comments">
-          暂无评论，快来抢沙发吧~
-        </div>
+      <div id="twikoo-container">
+        <div id="tcomment"></div>
       </div>
     </section>
   </div>
@@ -160,14 +119,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { Marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
 import { useReadingStore } from '../stores/reading'
 import { useActiveAnchor, useScrollObserver } from '../composables/useObserver'
-import { articlesApi, commentsApi } from '../api/frontend'
+import { articlesApi } from '../api/frontend'
+import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
 
 // 配置 marked 使用 highlight.js
 const marked = new Marked(
@@ -263,11 +223,11 @@ const loadArticle = async () => {
     setupHeadingObserver()
     activeAnchor.value = ''
 
-    // 加载评论
-    loadComments()
-
     // 添加代码块头部
     setTimeout(addCodeBlockHeader, 100)
+
+    // 初始化 Twikoo 评论
+    initTwikoo()
   } catch (error) {
     console.error('加载文章失败:', error)
     notFound.value = true
@@ -276,22 +236,42 @@ const loadArticle = async () => {
   }
 }
 
-// 评论数据
-const comments = ref([])
+// 初始化 Twikoo 评论
+const initTwikoo = () => {
+  // 确保 DOM 已渲染
+  nextTick(() => {
+    // 如果 Twikoo 已经加载，直接初始化
+    if (window.twikoo) {
+      initTwikooInstance()
+      return
+    }
 
-// 加载评论
-const loadComments = async () => {
-  try {
-    const res = await commentsApi.list(route.params.id)
-    comments.value = res.data.map(c => ({
-      id: c.id,
-      nickname: c.nickname,
-      content: c.content,
-      date: c.create_time
-    }))
-  } catch (error) {
-    console.error('加载评论失败:', error)
+    // 动态加载 Twikoo 脚本
+    const script = document.createElement('script')
+    script.src = '/twikoo.min.js'
+    script.onload = () => {
+      initTwikooInstance()
+    }
+    script.onerror = () => {
+      console.error('Twikoo 脚本加载失败')
+    }
+    document.head.appendChild(script)
+  })
+}
+
+// 初始化 Twikoo 实例
+const initTwikooInstance = () => {
+  if (!window.twikoo) {
+    console.error('Twikoo 未正确加载')
+    return
   }
+
+  window.twikoo.init({
+    envId: TWIKOO_ENV_ID,
+    el: TWIKOO_CONFIG.el,
+    path: `/article/${route.params.id}`,  // 用于区分不同文章的自定义路径，确保每篇文章评论独立
+    lang: TWIKOO_CONFIG.lang
+  })
 }
 
 // Table of Contents - 从Markdown解析
@@ -364,40 +344,6 @@ const formatDate = (date, includeTime = false) => {
     month: 'long',
     day: 'numeric'
   })
-}
-
-// 评论提交
-const commentForm = ref({
-  nickname: '',
-  email: '',
-  content: ''
-})
-const submitting = ref(false)
-const commentError = ref('')
-
-const submitComment = async () => {
-  if (!commentForm.value.nickname || !commentForm.value.content) {
-    commentError.value = '请填写昵称和评论内容'
-    return
-  }
-
-  try {
-    submitting.value = true
-    commentError.value = ''
-    await commentsApi.create({
-      article_id: parseInt(route.params.id),
-      ...commentForm.value
-    })
-    // 清空表单
-    commentForm.value = { nickname: '', email: '', content: '' }
-    // 重新加载评论
-    loadComments()
-  } catch (error) {
-    console.error('提交评论失败:', error)
-    commentError.value = '评论发表失败，请稍后重试'
-  } finally {
-    submitting.value = false
-  }
 }
 
 // Watch route changes
@@ -1251,138 +1197,8 @@ const handleScroll = () => {
   margin-bottom: var(--spacing-lg);
 }
 
-.comment-form {
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
-  margin-bottom: var(--spacing-xl);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-
-  @media (max-width: 600px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.comment-input {
-  width: 100%;
-  padding: var(--spacing-md);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  transition: border-color var(--transition-base);
-
-  &::placeholder {
-    color: var(--color-text-tertiary);
-  }
-
-  &:focus {
-    border-color: var(--color-accent);
-  }
-}
-
-.comment-textarea {
-  width: 100%;
-  padding: var(--spacing-md);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  outline: none;
-  resize: vertical;
-  transition: border-color var(--transition-base);
-
-  &::placeholder {
-    color: var(--color-text-tertiary);
-  }
-
-  &:focus {
-    border-color: var(--color-accent);
-  }
-}
-
-.form-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: var(--spacing-md);
-}
-
-.error-text {
-  color: #ff3b30;
-  font-size: var(--font-size-sm);
-}
-
-.submit-btn {
-  padding: var(--spacing-sm) var(--spacing-xl);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: #fff;
-  background: var(--color-accent);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all var(--transition-base);
-
-  &:hover:not(:disabled) {
-    background: var(--color-accent-hover);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-}
-
-.comments-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.comment-item {
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-}
-
-.comment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-sm);
-}
-
-.comment-author {
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.comment-time {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-}
-
-.comment-content {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.no-comments {
-  text-align: center;
-  color: var(--color-text-tertiary);
-  padding: var(--spacing-xl);
+#twikoo-container {
+  min-height: 200px;
 }
 
 /* Loading & Not Found States */

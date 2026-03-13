@@ -84,17 +84,6 @@ export const categoryApi = {
   delete: (id) => api.delete(`/categories/${id}`)
 }
 
-// 评论
-export const commentApi = {
-  list: (articleId) => api.get(`/comments/${articleId}`),
-  create: (data) => api.post('/comments', data),
-
-  // 管理
-  all: (params) => api.get('/comments/all', { params }),
-  delete: (id) => api.delete(`/comments/${id}`),
-  approve: (id, isApproved) => api.put(`/comments/${id}/approve`, null, { params: { is_approved: isApproved } })
-}
-
 // 友链
 export const friendLinkApi = {
   list: () => api.get('/friend_links'),
@@ -120,15 +109,4 @@ export const tagApi = {
 // 统计
 export const statsApi = {
   dashboard: () => api.get('/stats/dashboard')
-}
-
-// 留言板
-export const messageApi = {
-  list: () => api.get('/messages'),
-  create: (data) => api.post('/messages', data),
-
-  // 管理
-  all: (params) => api.get('/messages/all', { params }),
-  update: (id, data) => api.put(`/messages/${id}`, data),
-  delete: (id) => api.delete(`/messages/${id}`)
 }

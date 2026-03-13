@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from config import config
 from models import create_tables
 from logger import setup_logger, logger
-from routes import admin_router, article_router, category_router, comment_router, friendlink_router, tag_router, messageboard_router
+from routes import admin_router, article_router, category_router, friendlink_router, tag_router
 
 # 初始化日志配置
 logger = setup_logger(
@@ -54,10 +54,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(admin_router)
 app.include_router(article_router)
 app.include_router(category_router)
-app.include_router(comment_router)
 app.include_router(friendlink_router)
 app.include_router(tag_router)
-app.include_router(messageboard_router)
 
 
 # 健康检查

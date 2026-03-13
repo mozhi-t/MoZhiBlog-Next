@@ -3,7 +3,7 @@
     <!-- Page Header -->
     <header class="page-header">
       <h1 class="page-title">友链</h1>
-      <p class="page-desc">交换友链？随时欢迎！</p>
+      <p class="page-desc">山海相逢，心意相通</p>
     </header>
 
     <!-- Loading State -->
@@ -90,23 +90,38 @@
     <!-- Contact Section -->
     <div class="contact-section">
       <h2 class="section-title">交换友链</h2>
-      <p class="contact-text">如果你想交换友链，欢迎通过以下方式联系我：</p>
-      <div class="contact-info">
-        <div class="contact-item">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <polyline points="22,6 12,13 2,6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>email@example.com</span>
-        </div>
+      <p class="contact-text">如果你想交换友链，可以在下方评论发出你的友链信息或用邮箱联系我，我看到之后会第一时间添加的</p>
+
+      <!-- 默认友链信息 -->
+      <div class="info-block">
+        <h3 class="info-title">友链信息</h3>
+        <pre class="code-block">name: MoZhi's Blog
+link: https://blog.mozhi.top
+avatar: https://mozhi.s3.bitiful.net/cropped-tou.jpg
+descr: 远方很远，步履不停，未来可期</pre>
+      </div>
+
+      <!-- HTML版信息 -->
+      <div class="info-block">
+        <h3 class="info-title">HTML</h3>
+        <pre class="code-block">&lt;a href="https://blog.mozhi.top"&gt;&lt;img src="https://mozhi.s3.bitiful.net/cropped-tou.jpg" alt="avatar"&gt;MoZhi's Blog&lt;/a&gt;</pre>
       </div>
     </div>
+
+    <!-- Twikoo Comments Section -->
+    <section class="comments-section">
+      <h2 class="section-title">评论</h2>
+      <div id="twikoo-container">
+        <div id="tcomment"></div>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { friendLinksApi } from '../api/frontend'
+import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
 
 // 加载状态
 const loading = ref(true)
@@ -157,7 +172,45 @@ const loadLinks = async () => {
 
 onMounted(() => {
   loadLinks()
+  initTwikoo()
 })
+
+// 初始化 Twikoo 评论
+const initTwikoo = () => {
+  nextTick(() => {
+    // 如果 Twikoo 已经加载，直接初始化
+    if (window.twikoo) {
+      initTwikooInstance()
+      return
+    }
+
+    // 动态加载 Twikoo 脚本
+    const script = document.createElement('script')
+    script.src = '/twikoo.min.js'
+    script.onload = () => {
+      initTwikooInstance()
+    }
+    script.onerror = () => {
+      console.error('Twikoo 脚本加载失败')
+    }
+    document.head.appendChild(script)
+  })
+}
+
+// 初始化 Twikoo 实例
+const initTwikooInstance = () => {
+  if (!window.twikoo) {
+    console.error('Twikoo 未正确加载')
+    return
+  }
+
+  window.twikoo.init({
+    envId: TWIKOO_ENV_ID,
+    el: TWIKOO_CONFIG.el,
+    path: '/links',
+    lang: TWIKOO_CONFIG.lang
+  })
+}
 </script>
 
 <style lang="scss" scoped>
@@ -286,24 +339,39 @@ onMounted(() => {
   margin-bottom: var(--spacing-lg);
 }
 
-.contact-info {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-lg);
+.info-block {
+  margin-bottom: var(--spacing-lg);
 }
 
-.contact-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+.info-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-sm);
+}
 
-  svg {
-    width: 18px;
-    height: 18px;
-    color: var(--color-accent);
-  }
+.code-block {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.comments-section {
+  margin-top: var(--spacing-3xl);
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--color-divider);
+}
+
+#twikoo-container {
+  min-height: 200px;
 }
 
 @media (max-width: 768px) {

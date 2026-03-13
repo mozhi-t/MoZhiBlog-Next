@@ -47,15 +47,3 @@ export const tagsApi = {
 export const friendLinksApi = {
   list: () => frontendApi.get('/friend_links')
 }
-
-// 评论
-export const commentsApi = {
-  list: (articleId) => frontendApi.get(`/comments/${articleId}`),
-  create: (data) => frontendApi.post('/comments', data)
-}
-
-// 留言板
-export const messageBoardApi = {
-  list: () => frontendApi.get('/messages'),
-  create: (data) => frontendApi.post('/messages', data)
-}
