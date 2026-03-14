@@ -81,6 +81,7 @@
             class="toc-item"
             :class="{ active: activeAnchor === item.id }"
             :style="{ '--level': item.level }"
+            :data-id="item.id"
           >
             <a :href="`#${item.id}`" @click.prevent="scrollToAnchor(item.id)">
               {{ item.text }}
@@ -304,6 +305,19 @@ const imageLoaded = ref(false)
 
 // Active anchor tracking
 const activeAnchor = ref('')
+let isScrollingToAnchor = false
+
+// 自动滚动目录
+watch(activeAnchor, (newId) => {
+  if (newId) {
+    nextTick(() => {
+      const activeItem = document.querySelector(`.toc-item[data-id="${newId}"]`)
+      if (activeItem) {
+        activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    })
+  }
+})
 
 // 阅读进度
 const readingProgress = ref(0)
@@ -311,9 +325,18 @@ const readingProgress = ref(0)
 // 计算阅读进度
 const calculateProgress = () => {
   const scrollTop = window.scrollY
-  const docHeight = document.documentElement.scrollHeight - window.innerHeight
-  if (docHeight > 0) {
-    readingProgress.value = Math.min(100, Math.round((scrollTop / docHeight) * 100))
+  const contentBody = document.querySelector('.content-body')
+  if (!contentBody) return
+
+  const contentTop = contentBody.offsetTop
+  const contentHeight = contentBody.offsetHeight
+  const scrollableHeight = contentHeight - window.innerHeight
+
+  const relativeScrollTop = scrollTop - contentTop
+
+  if (scrollableHeight > 0) {
+    const progress = Math.round((relativeScrollTop / scrollableHeight) * 100)
+    readingProgress.value = Math.max(0, Math.min(100, progress))
   }
 }
 
@@ -321,9 +344,21 @@ const calculateProgress = () => {
 const scrollToAnchor = (id) => {
   const element = document.getElementById(id)
   if (element) {
+    activeAnchor.value = id
+    isScrollingToAnchor = true
     const offset = 80
     const top = element.getBoundingClientRect().top + window.scrollY - offset
     window.scrollTo({ top, behavior: 'smooth' })
+
+    const onScrollEnd = () => {
+      isScrollingToAnchor = false
+      window.removeEventListener('scrollend', onScrollEnd)
+    }
+    window.addEventListener('scrollend', onScrollEnd, { once: true })
+
+    setTimeout(() => {
+      isScrollingToAnchor = false
+    }, 1500)
   }
 }
 
@@ -377,11 +412,18 @@ const setupHeadingObserver = () => {
     }
 
     headingObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          activeAnchor.value = entry.target.id
-        }
-      })
+      // 点击目录滚动时跳过 Observer 更新，避免高亮错乱
+      if (isScrollingToAnchor) return
+
+      // 找到所有相交的标题，根据它们在页面中的实际位置排序，选择最上面的
+      const intersectingEntries = entries.filter(entry => entry.isIntersecting)
+      if (intersectingEntries.length > 0) {
+        // 按照页面中的实际位置排序，找到最上面的标题
+        intersectingEntries.sort((a, b) => {
+          return a.target.getBoundingClientRect().top - b.target.getBoundingClientRect().top
+        })
+        activeAnchor.value = intersectingEntries[0].target.id
+      }
     }, observerOptions)
 
     headings.forEach((heading) => {
@@ -593,6 +635,8 @@ const handleScroll = () => {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--color-border);
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
 
   @media (max-width: 1024px) {
     display: none;
@@ -692,6 +736,7 @@ const handleScroll = () => {
   &[style*="--level: 1"] a {
     padding-left: 20px;
     font-weight: 500;
+    color: var(--color-text-primary);
   }
 
   &[style*="--level: 2"] a {

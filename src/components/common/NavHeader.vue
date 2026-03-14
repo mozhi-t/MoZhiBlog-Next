@@ -1,4 +1,9 @@
 <template>
+  <!-- FPS Display - 显示在网站左上角 -->
+  <div class="fps-display" :class="{ scrolled: isScrolled }" title="当前帧率">
+    <span class="fps-value">{{ fps }}</span>
+  </div>
+
   <header class="nav-header" :class="{ scrolled: isScrolled, 'menu-open': menuOpen }">
     <nav class="nav-container">
       <!-- Logo -->
@@ -95,6 +100,26 @@ import { useThemeStore } from '../../stores/theme'
 const route = useRoute()
 const themeStore = useThemeStore()
 
+// FPS Calculation
+const fps = ref(60)
+let frameCount = 0
+let lastTime = performance.now()
+let animationFrameId = null
+
+const calculateFPS = () => {
+  frameCount++
+  const currentTime = performance.now()
+  const elapsed = currentTime - lastTime
+
+  if (elapsed >= 1000) {
+    fps.value = Math.round((frameCount * 1000) / elapsed)
+    frameCount = 0
+    lastTime = currentTime
+  }
+
+  animationFrameId = requestAnimationFrame(calculateFPS)
+}
+
 const theme = computed(() => themeStore.theme)
 const toggleTheme = () => themeStore.toggleTheme()
 
@@ -140,10 +165,14 @@ const isActive = (path) => {
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true })
   handleScroll()
+  calculateFPS()
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
+  }
 })
 </script>
 
@@ -184,7 +213,39 @@ onUnmounted(() => {
   transition: all var(--transition-smooth);
 }
 
-/* Logo */
+/* FPS Display - 显示在网站左上角 */
+.fps-display {
+  position: fixed;
+  left: 20px;
+  top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all var(--transition-smooth);
+  z-index: 1001;
+
+  .fps-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-accent);
+    line-height: 1;
+  }
+
+  &.scrolled {
+    width: 36px;
+    height: 36px;
+    top: 10px;
+  }
+}
+
 .nav-logo {
   display: flex;
   align-items: center;
