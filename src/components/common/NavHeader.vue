@@ -1,8 +1,23 @@
 <template>
-  <!-- FPS Display - 显示在网站左上角 -->
+  <!-- FPS Display -->
   <div class="fps-display" :class="{ scrolled: isScrolled, hovered: isHovered }" @mouseenter="isHovered = true" @mouseleave="isHovered = false" title="当前帧率">
     <span class="fps-value">{{ fps }}</span>
     <span class="fps-text">当前FPS：</span>
+  </div>
+
+  <!-- Search Box -->
+  <div class="search-box" :class="{ scrolled: isScrolled, 'search-hovered': searchHovered }" @mouseenter="searchHovered = true" @mouseleave="searchHovered = false" title="搜索文章">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <circle cx="11" cy="11" r="8" stroke-width="2"/>
+      <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <input
+      type="text"
+      class="search-input"
+      placeholder="搜索文章..."
+      v-model="searchQuery"
+      @keyup.enter="handleSearch"
+    />
   </div>
 
   <header class="nav-header" :class="{ scrolled: isScrolled, 'menu-open': menuOpen }">
@@ -95,7 +110,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useThemeStore } from '../../stores/theme'
 
 const route = useRoute()
@@ -156,6 +171,17 @@ const isScrolled = ref(false)
 const isHovered = ref(false)
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 20
+}
+
+// Search functionality
+const searchHovered = ref(false)
+const searchQuery = ref('')
+const router = useRouter()
+
+const handleSearch = () => {
+  if (searchQuery.value.trim()) {
+    router.push({ path: '/search', query: { q: searchQuery.value.trim() } })
+  }
 }
 
 // Active route check
@@ -284,6 +310,96 @@ onUnmounted(() => {
     &.hovered {
       width: 160px;
     }
+  }
+}
+
+/* Search Box */
+.search-box {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  display: flex;
+  align-items: center;
+  width: var(--nav-height);
+  height: var(--nav-height);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  box-shadow: var(--shadow-nav);
+  flex-shrink: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 1001;
+  overflow: hidden;
+
+  .search-icon {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-secondary);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    flex-shrink: 0;
+  }
+
+  .search-input {
+    position: absolute;
+    left: -10px;
+    width: 140px;
+    height: 100%;
+    padding: 0 16px 0 36px;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: blur(4px);
+    transform: translateX(-10px);
+
+    &::placeholder {
+      color: var(--color-text-tertiary);
+    }
+  }
+
+  &.search-hovered {
+    width: 200px;
+    border-radius: 30px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+
+    .search-icon {
+      left: 16px;
+      transform: translateX(0);
+    }
+
+    .search-input {
+      opacity: 1;
+      left: 12px;
+      filter: blur(0);
+      transform: translateX(0);
+    }
+  }
+
+  &.scrolled {
+    width: var(--nav-height-scrolled);
+    height: var(--nav-height-scrolled);
+    top: 10px;
+
+    &.search-hovered {
+      width: 200px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .fps-display,
+  .search-box {
+    display: none;
   }
 }
 

@@ -58,6 +58,12 @@ const routes = [
     meta: { title: '留言板' }
   },
   {
+    path: '/search',
+    name: 'Search',
+    component: () => import('../views/SearchPage.vue'),
+    meta: { title: '搜索' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFoundPage.vue'),
