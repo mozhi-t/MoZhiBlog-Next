@@ -1,7 +1,8 @@
 <template>
   <!-- FPS Display - 显示在网站左上角 -->
-  <div class="fps-display" :class="{ scrolled: isScrolled }" title="当前帧率">
+  <div class="fps-display" :class="{ scrolled: isScrolled, hovered: isHovered }" @mouseenter="isHovered = true" @mouseleave="isHovered = false" title="当前帧率">
     <span class="fps-value">{{ fps }}</span>
+    <span class="fps-text">当前FPS：</span>
   </div>
 
   <header class="nav-header" :class="{ scrolled: isScrolled, 'menu-open': menuOpen }">
@@ -152,6 +153,7 @@ const closeMenu = () => {
 
 // Scroll state
 const isScrolled = ref(false)
+const isHovered = ref(false)
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 20
 }
@@ -213,7 +215,7 @@ onUnmounted(() => {
   transition: all var(--transition-smooth);
 }
 
-/* FPS Display - 显示在网站左上角 */
+/* FPS Display */
 .fps-display {
   position: fixed;
   left: 20px;
@@ -221,28 +223,67 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: var(--nav-height);
+  height: var(--nav-height);
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: 50%;
+  box-shadow: var(--shadow-nav);
   flex-shrink: 0;
-  transition: all var(--transition-smooth);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 1001;
+  overflow: hidden;
 
   .fps-value {
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 600;
-    color: var(--color-accent);
+    color: var(--color-text-secondary);
     line-height: 1;
+    transition: all 0.3s ease;
+  }
+
+  .fps-text {
+    position: absolute;
+    left: -10px;
+    opacity: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: blur(4px);
+    transform: translateX(-10px);
+  }
+
+  &.hovered {
+    width: 160px;
+    border-radius: 30px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+
+    .fps-value {
+      transform: translateX(30px);
+    }
+
+    .fps-text {
+      opacity: 1;
+      left: 16px;
+      filter: blur(0);
+      transform: translateX(0);
+    }
   }
 
   &.scrolled {
-    width: 36px;
-    height: 36px;
+    width: var(--nav-height-scrolled);
+    height: var(--nav-height-scrolled);
     top: 10px;
+
+    &.hovered {
+      width: 160px;
+    }
   }
 }
 
