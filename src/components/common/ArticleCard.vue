@@ -15,10 +15,16 @@
       </div>
 
       <!-- 文章标题 -->
-      <h3 class="card-title">{{ article.title }}</h3>
+      <div class="card-title-row">
+        <h3 class="card-title">{{ article.title }}</h3>
+        <div class="card-badges" v-if="article.is_top || article.need_password">
+          <span v-if="article.is_top" class="badge top">置顶</span>
+          <span v-if="article.need_password" class="badge password">加密</span>
+        </div>
+      </div>
 
       <!-- 简短摘要 -->
-      <p class="card-excerpt">{{ article.excerpt }}</p>
+      <p class="card-excerpt">{{ article.excerpt || (article.need_password ? '这是一篇密码保护文章，输入正确密码后可查看完整内容。' : '') }}</p>
 
       <!-- 底部：标签云 + 日期 + 阅读数 -->
       <div class="card-footer">
@@ -181,8 +187,42 @@ const goToTag = (tagId) => {
   font-weight: 600;
   line-height: var(--line-height-tight);
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-md);
   transition: color var(--transition-base);
+}
+
+.card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+
+  &.top {
+    color: #b85c00;
+    background: rgba(255, 183, 77, 0.2);
+  }
+
+  &.password {
+    color: #8a3ffc;
+    background: rgba(138, 63, 252, 0.12);
+  }
 }
 
 /* 简短摘要 */

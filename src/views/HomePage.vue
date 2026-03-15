@@ -106,10 +106,11 @@
 
           <!-- Pagination -->
           <Pagination
-            v-if="total > pageSize"
+            v-if="totalPages > 1"
             :current-page="currentPage"
             :total="total"
             :page-size="pageSize"
+            :total-pages="totalPages"
             @page-change="handlePageChange"
             class="article-pagination"
           />
@@ -238,6 +239,7 @@ const currentChars = computed(() => currentSubtitle.value.split(''))
 const articles = ref([])
 const currentPage = ref(1)
 const total = ref(0)
+const totalPages = ref(0)
 const pageSize = 15
 
 // 统计数据
@@ -251,7 +253,7 @@ const stats = ref({
 const loadArticles = async (page = 1) => {
   try {
     loading.value = true
-    const res = await articlesApi.list({ page, size: pageSize })
+    const res = await articlesApi.list({ page, size: pageSize, merge_top: true })
     articles.value = res.data.items.map(item => ({
       id: item.id,
       title: item.title,
@@ -260,12 +262,16 @@ const loadArticles = async (page = 1) => {
       category: item.category?.name || '',
       category_id: item.category_id || null,
       tag_list: item.tag_list || [],
+      type: item.type || 0,
+      is_top: !!item.is_top,
+      need_password: !!item.need_password,
       read_count: item.read_count || 0,
       content: item.content || '',
       create_time: item.create_time,
       update_time: item.update_time
     }))
     total.value = res.data.total || 0
+    totalPages.value = res.data.pages || 0
     currentPage.value = page
   } catch (error) {
     console.error('加载文章失败:', error)

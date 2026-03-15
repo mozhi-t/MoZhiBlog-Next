@@ -36,6 +36,7 @@
             <th>标题</th>
             <th>分类</th>
             <th>标签</th>
+            <th>属性</th>
             <th>阅读量</th>
             <th>发布时间</th>
             <th>操作</th>
@@ -53,6 +54,9 @@
             <td>
               <span class="tag" v-for="tag in article.tag_list" :key="tag.id">{{ tag.name }}</span>
               <span class="text-muted" v-if="!article.tag_list || article.tag_list.length === 0">-</span>
+            </td>
+            <td>
+              <span class="attr-badge" :class="articleAttrClass(article.type)">{{ articleAttrText(article.type) }}</span>
             </td>
             <td>{{ article.read_count }}</td>
             <td class="time-cell">{{ formatDate(article.create_time) }}</td>
@@ -116,6 +120,18 @@ const openModal = (article = null) => {
 
 // 计算属性
 const totalPages = computed(() => Math.ceil(total.value / size.value))
+
+const articleAttrText = (type) => {
+  if (type === 1) return '置顶'
+  if (type === 2) return '密码'
+  return '普通'
+}
+
+const articleAttrClass = (type) => {
+  if (type === 1) return 'top'
+  if (type === 2) return 'password'
+  return 'normal'
+}
 
 // 方法
 const formatDate = (dateStr) => {
@@ -297,6 +313,30 @@ onMounted(() => {
   color: var(--color-accent);
   background: var(--color-accent-light);
   border-radius: var(--radius-sm);
+}
+
+.attr-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+
+  &.normal {
+    color: var(--color-text-secondary);
+    background: var(--color-bg-tertiary);
+  }
+
+  &.top {
+    color: #b85c00;
+    background: rgba(255, 183, 77, 0.22);
+  }
+
+  &.password {
+    color: #8a3ffc;
+    background: rgba(138, 63, 252, 0.12);
+  }
 }
 
 .tag {

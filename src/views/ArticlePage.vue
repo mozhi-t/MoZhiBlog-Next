@@ -3,9 +3,13 @@
     <!-- Article Header -->
     <header class="article-header">
       <div class="header-meta">
-        <router-link :to="`/category/${article.categorySlug}`" class="category-tag">
+        <router-link v-if="article.category" :to="`/category/${article.categorySlug}`" class="category-tag">
           {{ article.category }}
         </router-link>
+        <div class="header-badges" v-if="article.isTop || article.needPassword">
+          <span v-if="article.isTop" class="header-badge top">置顶文章</span>
+          <span v-if="article.needPassword" class="header-badge password">密码保护</span>
+        </div>
       </div>
       <h1 class="article-title">{{ article.title }}</h1>
 
@@ -66,8 +70,26 @@
       </div>
     </header>
 
+    <section v-if="article.needPassword" class="password-panel">
+      <div class="password-card">
+        <h3>这是一篇受保护的文章</h3>
+        <p>输入正确密码后才能查看正文内容。</p>
+        <input
+          v-model="passwordInput"
+          type="password"
+          class="password-input"
+          placeholder="请输入访问密码"
+          @keyup.enter="verifyPasswordAndReload"
+        />
+        <button class="unlock-btn" @click="verifyPasswordAndReload" :disabled="verifyingPassword">
+          {{ verifyingPassword ? '验证中...' : '解锁文章' }}
+        </button>
+        <p v-if="passwordError" class="password-error">{{ passwordError }}</p>
+      </div>
+    </section>
+
     <!-- Article Content -->
-    <article class="article-content" :style="{ '--reading-font-size': fontSize }">
+    <article v-else class="article-content" :style="{ '--reading-font-size': fontSize }">
       <!-- Table of Contents -->
       <aside class="toc" v-if="toc.length > 0">
         <div class="toc-header">
@@ -98,7 +120,7 @@
     </article>
 
     <!-- Comments Section -->
-    <section class="comments-section">
+    <section v-if="!article.needPassword" class="comments-section">
       <h3 class="comments-title">评论</h3>
       <div id="twikoo-container">
         <div id="tcomment"></div>
@@ -126,7 +148,6 @@ import { Marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
 import { useReadingStore } from '../stores/reading'
-import { useActiveAnchor, useScrollObserver } from '../composables/useObserver'
 import { articlesApi } from '../api/frontend'
 import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
 
@@ -164,6 +185,9 @@ const fontSize = computed(() => readingStore.currentFontSize)
 
 const loading = ref(true)
 const notFound = ref(false)
+const passwordInput = ref('')
+const passwordError = ref('')
+const verifyingPassword = ref(false)
 
 // 文章数据
 const article = ref({
@@ -175,7 +199,9 @@ const article = ref({
   categorySlug: '',
   tagList: [],
   content: '',
-  readCount: 0
+  readCount: 0,
+  isTop: false,
+  needPassword: false
 })
 
 // 计算字数
@@ -203,6 +229,7 @@ const loadArticle = async () => {
   try {
     loading.value = true
     notFound.value = false
+    passwordError.value = ''
     const id = route.params.id
 
     const res = await articlesApi.detail(id)
@@ -216,24 +243,51 @@ const loadArticle = async () => {
       category: data.category?.name || '',
       categorySlug: data.category?.name || '',
       tagList: data.tag_list || [],
-      content: data.content,
-      readCount: data.read_count || 0
+      content: data.content || '',
+      readCount: data.read_count || 0,
+      isTop: !!data.is_top,
+      needPassword: !!data.need_password
     }
 
-    // 设置标题滚动监听
-    setupHeadingObserver()
-    activeAnchor.value = ''
-
-    // 添加代码块头部
-    setTimeout(addCodeBlockHeader, 100)
-
-    // 初始化 Twikoo 评论
-    initTwikoo()
+    if (!data.need_password) {
+      setupHeadingObserver()
+      activeAnchor.value = ''
+      setTimeout(addCodeBlockHeader, 100)
+      initTwikoo()
+    }
   } catch (error) {
     console.error('加载文章失败:', error)
     notFound.value = true
   } finally {
     loading.value = false
+  }
+}
+
+const verifyPasswordAndReload = async () => {
+  if (!passwordInput.value.trim()) {
+    passwordError.value = '请输入访问密码'
+    return
+  }
+
+  try {
+    verifyingPassword.value = true
+    passwordError.value = ''
+    const res = await articlesApi.verifyPassword(route.params.id, passwordInput.value.trim())
+    if (!res.data?.passed) {
+      passwordError.value = '密码错误，请重新输入'
+      return
+    }
+
+    if (res.data?.access_token) {
+      sessionStorage.setItem(`article_access_${route.params.id}`, res.data.access_token)
+    }
+
+    passwordInput.value = ''
+    await loadArticle()
+  } catch (error) {
+    passwordError.value = error.response?.data?.detail || error.message || '密码验证失败'
+  } finally {
+    verifyingPassword.value = false
   }
 }
 
@@ -533,7 +587,34 @@ const handleScroll = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
   margin-bottom: var(--spacing-md);
+}
+
+.header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+
+  &.top {
+    color: #b85c00;
+    background: rgba(255, 183, 77, 0.22);
+  }
+
+  &.password {
+    color: #8a3ffc;
+    background: rgba(138, 63, 252, 0.12);
+  }
 }
 
 .category-tag {
@@ -603,6 +684,73 @@ const handleScroll = () => {
       opacity: 0.7;
     }
   }
+}
+
+.password-panel {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.password-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-2xl);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+
+  h3 {
+    margin: 0;
+    color: var(--color-text-primary);
+  }
+
+  p {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+}
+
+.password-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-accent);
+  }
+}
+
+.unlock-btn {
+  align-self: center;
+  min-width: 140px;
+  padding: var(--spacing-sm) var(--spacing-xl);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+  transition: all var(--transition-base);
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.password-error {
+  color: #d92d20 !important;
+  font-size: var(--font-size-sm);
 }
 
 /* Article Content Layout */

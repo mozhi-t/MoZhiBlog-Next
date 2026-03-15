@@ -12,6 +12,11 @@ const frontendApi = axios.create({
   }
 })
 
+const getArticleAccessToken = (articleId) => {
+  if (!articleId) return ''
+  return sessionStorage.getItem(`article_access_${articleId}`) || ''
+}
+
 // 响应处理
 frontendApi.interceptors.response.use(
   response => response.data,
@@ -28,7 +33,13 @@ export const articlesApi = {
   // 获取文章列表
   list: (params) => frontendApi.get('/articles', { params }),
   // 获取文章详情
-  detail: (id) => frontendApi.get(`/articles/${id}`),
+  detail: (id) => frontendApi.get(`/articles/${id}`, {
+    headers: {
+      'X-Article-Access-Token': getArticleAccessToken(id)
+    }
+  }),
+  // 校验文章访问密码
+  verifyPassword: (id, password) => frontendApi.post(`/articles/${id}/verify-password`, { password }),
   // 获取热门文章
   hot: (limit = 10) => frontendApi.get('/articles/hot', { params: { limit } })
 }

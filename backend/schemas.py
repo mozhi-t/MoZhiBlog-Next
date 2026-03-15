@@ -62,7 +62,8 @@ class ArticleCreate(BaseModel):
     content: str = Field(..., min_length=1)
     category_id: Optional[int] = None
     tags: Optional[str] = Field(None, description="标签ID列表，用逗号分隔，如 '1,2,3'")
-    type: int = Field(0, description="文章类型: 0-文章, 1-说说")
+    type: int = Field(0, description="文章属性: 0-普通, 1-置顶, 2-密码访问")
+    access_password: Optional[str] = Field(None, max_length=100, description="文章访问密码，仅 type=2 时生效")
     create_time: Optional[datetime] = Field(None, description="创建时间")
     update_time: Optional[datetime] = Field(None, description="更新时间")
 
@@ -74,7 +75,8 @@ class ArticleUpdate(BaseModel):
     content: Optional[str] = None
     category_id: Optional[int] = None
     tags: Optional[str] = Field(None, description="标签ID列表，用逗号分隔，如 '1,2,3'")
-    type: Optional[int] = Field(None, description="文章类型: 0-文章, 1-说说")
+    type: Optional[int] = Field(None, description="文章属性: 0-普通, 1-置顶, 2-密码访问")
+    access_password: Optional[str] = Field(None, max_length=100, description="新访问密码；编辑时留空表示保留原密码")
     create_time: Optional[datetime] = Field(None, description="创建时间")
     update_time: Optional[datetime] = Field(None, description="更新时间")
 
@@ -87,6 +89,8 @@ class ArticleListResponse(BaseModel):
     category_id: Optional[int] = None
     tags: Optional[str] = None
     type: int = 0
+    is_top: bool = False
+    need_password: bool = False
     read_count: int
     create_time: datetime
     update_time: datetime
@@ -102,10 +106,13 @@ class ArticleDetailResponse(BaseModel):
     id: int
     title: str
     summary: Optional[str] = None
-    content: str
+    content: Optional[str] = None
     category_id: Optional[int] = None
     tags: Optional[str] = None
     type: int = 0
+    is_top: bool = False
+    need_password: bool = False
+    has_password: bool = False
     read_count: int
     create_time: datetime
     update_time: datetime
@@ -224,3 +231,7 @@ class PaginatedResponse(BaseModel):
     page: int
     size: int
     pages: int
+
+
+class ArticlePasswordVerifyRequest(BaseModel):
+    password: str = Field(..., min_length=1, max_length=100)

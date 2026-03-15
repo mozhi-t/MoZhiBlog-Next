@@ -73,7 +73,8 @@ class Article(Base):
     content = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey('category.id'), nullable=True)
     tags = Column(String(200), nullable=True)  # 标签ID列表
-    type = Column(SmallInteger, default=0)  # 文章类型(目前暂时用不到这个字段)
+    type = Column(SmallInteger, default=0)  # 文章属性: 0-普通, 1-置顶, 2-密码访问
+    access_password = Column(String(255), nullable=True)
     read_count = Column(Integer, default=0)
     create_time = Column(DateTime, default=datetime.now)
     update_time = Column(DateTime, default=datetime.now)

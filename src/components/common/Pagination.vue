@@ -52,12 +52,16 @@ const props = defineProps({
   pageSize: {
     type: Number,
     default: 20
+  },
+  totalPages: {
+    type: Number,
+    default: 0
   }
 })
 
 const emit = defineEmits(['page-change'])
 
-const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
+const totalPages = computed(() => props.totalPages || Math.ceil(props.total / props.pageSize))
 
 const visiblePages = computed(() => {
   const total = totalPages.value

@@ -78,6 +78,26 @@
               class="meta-input"
             />
           </div>
+
+          <div class="meta-item">
+            <label>文章属性</label>
+            <select v-model="form.type" class="meta-select">
+              <option :value="0">普通文章</option>
+              <option :value="1">置顶文章</option>
+              <option :value="2">密码访问</option>
+            </select>
+          </div>
+        </div>
+
+        <div v-if="form.type === 2" class="form-group">
+          <label>访问密码</label>
+          <input
+            v-model="form.access_password"
+            type="password"
+            class="meta-input"
+            :placeholder="hasExistingPassword ? '留空则保留原密码，输入新值则覆盖' : '请输入文章访问密码'"
+          />
+          <p class="field-tip">密码不会随文章详情接口返回，访客需先校验密码才能查看正文。</p>
         </div>
 
         <!-- 标签多选 -->
@@ -140,6 +160,8 @@ const form = reactive({
   content: '',
   category_id: null,
   tag_ids: [],
+  type: 0,
+  access_password: '',
   create_time: '',
   update_time: ''
 })
@@ -148,6 +170,7 @@ const form = reactive({
 const categories = ref([])
 const tags = ref([])
 const submitting = ref(false)
+const hasExistingPassword = ref(false)
 
 // 消息提示
 const message = ref({
@@ -204,6 +227,9 @@ const loadArticle = async () => {
     form.summary = data.summary || ''
     form.content = data.content || ''
     form.category_id = data.category?.id || null
+    form.type = data.type ?? 0
+    hasExistingPassword.value = !!data.has_password
+    form.access_password = ''
 
     // 设置标签
     if (data.tag_list && data.tag_list.length > 0) {
@@ -256,6 +282,11 @@ const handleSubmit = async () => {
     return
   }
 
+  if (form.type === 2 && !form.access_password.trim() && !hasExistingPassword.value) {
+    showMessage('密码访问文章必须设置访问密码', 'error')
+    return
+  }
+
   submitting.value = true
   try {
     const data = {
@@ -263,7 +294,12 @@ const handleSubmit = async () => {
       summary: form.summary,
       content: form.content,
       category_id: form.category_id,
+      type: form.type,
       tags: form.tag_ids.length > 0 ? form.tag_ids.join(',') : ''
+    }
+
+    if (form.type === 2 && form.access_password.trim()) {
+      data.access_password = form.access_password.trim()
     }
 
     // 如果填写了时间，则添加到请求中
@@ -433,6 +469,12 @@ onMounted(() => {
   &:focus {
     border-color: var(--color-accent);
   }
+}
+
+.field-tip {
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
 }
 
 .meta-row {
