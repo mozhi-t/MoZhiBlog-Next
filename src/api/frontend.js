@@ -38,6 +38,8 @@ export const articlesApi = {
       'X-Article-Access-Token': getArticleAccessToken(id)
     }
   }),
+  // 获取文章引用信息
+  reference: (id) => frontendApi.get(`/articles/${id}/reference`),
   // 校验文章访问密码
   verifyPassword: (id, password) => frontendApi.post(`/articles/${id}/verify-password`, { password }),
   // 获取热门文章

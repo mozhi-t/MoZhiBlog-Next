@@ -239,6 +239,35 @@ def get_hot_articles(limit: int = Query(10, ge=1, le=50), db: Session = Depends(
     }
 
 
+@router.get("/{article_id}/reference")
+def get_article_reference(article_id: int, db: Session = Depends(get_db)):
+    article = db.query(Article).filter(Article.id == article_id).first()
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="文章不存在",
+        )
+
+    category = None
+    if article.category_id:
+        category_model = db.query(Category).filter(Category.id == article.category_id).first()
+        if category_model:
+            category = {"id": category_model.id, "name": category_model.name}
+
+    return {
+        "code": 200,
+        "msg": "success",
+        "data": {
+            "id": article.id,
+            "title": article.title,
+            "summary": article.summary,
+            "category": category,
+            "type": article.type,
+            "need_password": article.type == ARTICLE_TYPE_PASSWORD,
+        },
+    }
+
+
 @router.get("/{article_id}")
 def get_article(
     article_id: int,

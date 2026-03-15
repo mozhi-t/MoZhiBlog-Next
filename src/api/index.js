@@ -68,6 +68,7 @@ export const articleApi = {
   // 公开
   list: (params) => api.get('/articles', { params }),
   detail: (id) => api.get(`/articles/${id}`),
+  reference: (id) => api.get(`/articles/${id}/reference`),
   hot: (limit = 10) => api.get('/articles/hot', { params: { limit } }),
 
   // 管理

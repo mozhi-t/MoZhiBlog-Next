@@ -136,7 +136,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { articleApi, categoryApi, tagApi } from '@/api'
-import { enhanceCodeBlocks, renderMarkdown } from '@/utils/markdown'
+import { enhanceCodeBlocks, hydrateArticleReferences, renderMarkdown } from '@/utils/markdown'
 
 const route = useRoute()
 const router = useRouter()
@@ -175,6 +175,10 @@ const previewContent = computed(() => {
 const syncPreviewDecorations = async () => {
   await nextTick()
   enhanceCodeBlocks(previewRef.value)
+  await hydrateArticleReferences(previewRef.value, async (id) => {
+    const res = await articleApi.reference(id)
+    return res.data
+  })
 }
 
 const loadCategories = async () => {

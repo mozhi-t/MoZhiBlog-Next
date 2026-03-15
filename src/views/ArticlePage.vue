@@ -113,7 +113,7 @@
       </aside>
 
       <!-- Main Content -->
-      <div class="content-body" ref="contentRef">
+      <div class="content-body markdown-content" ref="contentRef">
         <!-- 渲染Markdown内容 -->
         <div v-html="renderedContent"></div>
       </div>
@@ -150,6 +150,7 @@ import hljs from 'highlight.js'
 import { useReadingStore } from '../stores/reading'
 import { articlesApi } from '../api/frontend'
 import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
+import { hydrateArticleReferences, renderMarkdown } from '../utils/markdown'
 
 // 配置 marked 使用 highlight.js
 const marked = new Marked(
@@ -351,7 +352,7 @@ const toc = computed(() => {
 // 渲染Markdown内容
 const renderedContent = computed(() => {
   if (!article.value.content) return ''
-  return marked.parse(article.value.content)
+  return renderMarkdown(article.value.content)
 })
 
 // Image lazy loading
@@ -549,6 +550,11 @@ const addCodeBlockHeader = () => {
         console.error('复制失败:', err)
       }
     }
+  })
+
+  hydrateArticleReferences(document.querySelector('.content-body'), async (id) => {
+    const res = await articlesApi.reference(id)
+    return res.data
   })
 }
 
