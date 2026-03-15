@@ -20,6 +20,7 @@
       <div class="content-wrapper">
         <!-- Left Sidebar - Author Card -->
         <aside class="sidebar">
+          <div class="sidebar-fixed">
           <div class="author-card">
             <div
               class="greeting-cylinder"
@@ -37,6 +38,19 @@
             <p class="author-bio">远方很远，步履不停，未来可期</p>
 
             <!-- 统计数据 -->
+            <div class="author-intro-zone">
+              <div class="author-intro-default">
+                <div class="author-avatar">
+                  <img src="@/assets/tx.jpg" alt="头像" />
+                </div>
+                <h3 class="author-name">MoZhi</h3>
+                <p class="author-bio">远方很远，步履不停，未来可期</p>
+              </div>
+              <p class="author-intro-text">
+                Hi~欢迎光临MoZhi的个人博客，这里存放有技术分析、学习笔记、生活感悟等内容，还有一些好玩的效果，希望你可以在这里找到对你有用的知识和感悟
+              </p>
+            </div>
+
             <div class="author-stats">
               <div class="stat-item">
                 <span class="stat-value">{{ stats.articleCount }}</span>
@@ -67,19 +81,18 @@
                 </svg>
               </a>
             </div>
-
-            <!-- Year Progress Card -->
-            <div class="year-progress-card">
-              <div class="year-progress-header">
-                <span class="year-label">{{ currentYear }}</span>
-                <span class="year-progress-value">{{ yearProgress7 }}%</span>
-              </div>
-              <div class="year-progress-bar">
-                <div class="progress-ring">
-                  <div class="progress-ring-fill" :style="{ width: yearProgress2 + '%' }"></div>
-                </div>
+          </div>
+          <div class="year-progress-card">
+            <div class="year-progress-header">
+              <span class="year-label">{{ currentYear }}</span>
+              <span class="year-progress-value">{{ yearProgress7 }}%</span>
+            </div>
+            <div class="year-progress-bar">
+              <div class="progress-ring">
+                <div class="progress-ring-fill" :style="{ width: yearProgress2 + '%' }"></div>
               </div>
             </div>
+          </div>
           </div>
         </aside>
 
@@ -225,7 +238,7 @@ const currentChars = computed(() => currentSubtitle.value.split(''))
 const articles = ref([])
 const currentPage = ref(1)
 const total = ref(0)
-const pageSize = 20
+const pageSize = 15
 
 // 统计数据
 const stats = ref({
@@ -418,13 +431,24 @@ onUnmounted(() => {
 
 /* Left Sidebar - Author Card */
 .sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
   flex-shrink: 0;
   width: 290px;
 }
 
-.author-card {
+.sidebar-fixed {
   position: sticky;
   top: calc(var(--nav-height) + 40px);
+  width: 290px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.author-card {
   background: var(--color-bg-secondary);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
@@ -435,6 +459,12 @@ onUnmounted(() => {
   &:hover {
     box-shadow: var(--shadow-md);
   }
+}
+
+.author-card > .author-avatar,
+.author-card > .author-name,
+.author-card > .author-bio {
+  display: none;
 }
 
 .greeting-cylinder {
@@ -515,6 +545,51 @@ onUnmounted(() => {
   }
 }
 
+.author-intro-zone {
+  position: relative;
+  min-height: 178px;
+  margin-bottom: var(--spacing-md);
+  cursor: default;
+}
+
+.author-intro-default,
+.author-intro-text {
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease,
+    filter 0.45s ease;
+}
+
+.author-intro-default {
+  position: relative;
+  z-index: 1;
+}
+
+.author-intro-text {
+  position: absolute;
+  inset: 50% 0 auto;
+  margin: 0;
+  color: #7a7a7a;
+  font-size: 16px;
+  line-height: 1.9;
+  text-align: left;
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(-50%) scale(1.02);
+}
+
+.author-intro-zone:hover .author-intro-default {
+  opacity: 0;
+  filter: blur(10px);
+  transform: scale(0.9);
+}
+
+.author-intro-zone:hover .author-intro-text {
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(-50%) scale(1);
+}
+
 .author-name {
   font-size: var(--font-size-xl);
   font-weight: 600;
@@ -591,10 +666,16 @@ onUnmounted(() => {
 
 /* Year Progress Card */
 .year-progress-card {
-  margin-top: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   text-align: center;
+  transition: all var(--transition-smooth);
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .year-progress-header {
@@ -653,6 +734,11 @@ onUnmounted(() => {
 @media (max-width: 900px) {
   .content-wrapper {
     flex-direction: column;
+  }
+
+  .sidebar-fixed {
+    position: static;
+    width: 100%;
   }
 
   .sidebar {

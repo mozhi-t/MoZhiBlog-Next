@@ -22,7 +22,9 @@
 
   <header class="nav-header" :class="{ scrolled: isScrolled, 'menu-open': menuOpen }">
     <nav class="nav-container" :class="navPromptClasses">
-      <div class="nav-radiance-core" aria-hidden="true"></div>
+      <div class="nav-prompt-overlay" aria-hidden="true">
+        <div class="nav-radiance-core"></div>
+      </div>
 
       <!-- Logo -->
       <router-link to="/" class="nav-logo" @click="closeMenu">
@@ -107,6 +109,10 @@
         </ul>
       </Transition>
       <div
+        class="nav-prompt-overlay"
+        :class="{ visible: isPromptTextVisible }"
+      >
+        <div
         class="nav-prompt"
         :class="[
           promptType ? `is-${promptType}` : '',
@@ -115,6 +121,7 @@
         aria-live="polite"
       >
         {{ promptMessage }}
+        </div>
       </div>
     </nav>
   </header>
@@ -215,11 +222,11 @@ const DEVTOOLS_THRESHOLD = 160
 
 const promptMessage = computed(() => {
   if (promptType.value === NAV_PROMPT_TYPES.copy) {
-    return '已复制文字 ✅'
+    return '复制成功'
   }
 
   if (promptType.value === NAV_PROMPT_TYPES.devtools) {
-    return '检测到调试工具打开 ⚠️'
+    return '您已打开开发者工具，请注意遵守开源协议'
   }
 
   return ''
@@ -386,7 +393,7 @@ onUnmounted(() => {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-nav);
   box-shadow: var(--shadow-nav);
-  overflow: hidden;
+  overflow: visible;
   isolation: isolate;
   transition:
     background 0.4s ease-in-out,
@@ -402,6 +409,15 @@ onUnmounted(() => {
       filter 0.3s ease-in-out,
       opacity 0.3s ease-in-out,
       transform 0.3s ease-in-out;
+  }
+
+  .nav-prompt-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
   }
 
   .nav-radiance-core {
@@ -460,9 +476,11 @@ onUnmounted(() => {
   }
 
   &.is-prompt-blurred {
-    > :not(.nav-prompt) {
+    > :not(.nav-prompt-overlay) {
       filter: blur(6px);
+      contain: paint;
       opacity: 0.34;
+      transform: scale(0.985);
     }
 
     &::after {
@@ -546,12 +564,13 @@ onUnmounted(() => {
   position: absolute;
   left: 50%;
   top: 50%;
-  z-index: 3;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   height: 34px;
   min-width: 260px;
+  max-width: calc(100% - 48px);
   padding: 0 24px;
   color: var(--color-text-primary);
   font-size: 18px;
@@ -560,6 +579,8 @@ onUnmounted(() => {
   letter-spacing: 0.02em;
   text-align: center;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   opacity: 0;
   pointer-events: none;
   text-shadow: 0 1px 12px rgba(255, 255, 255, 0.28);
@@ -783,6 +804,7 @@ onUnmounted(() => {
 }
 
 .nav-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
@@ -807,8 +829,10 @@ onUnmounted(() => {
     bottom: 4px;
     left: 50%;
     width: 0;
-    height: 1px;
+    height: 3px;
     background: var(--color-accent);
+    border-radius: 999px;
+    pointer-events: none;
     transition: all var(--transition-base);
     transform: translateX(-50%);
   }
@@ -821,6 +845,8 @@ onUnmounted(() => {
 /* Dropdown Menu */
 .nav-dropdown {
   position: relative;
+  padding-bottom: 8px;
+  margin-bottom: -8px;
 
   &:hover .dropdown-menu {
     opacity: 1;
@@ -843,6 +869,7 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
+  z-index: 20;
   transform: translateY(-5px);
   min-width: 140px;
   padding: var(--spacing-sm);
