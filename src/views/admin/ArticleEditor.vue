@@ -71,26 +71,27 @@
               class="meta-input"
             />
           </div>
+        </div>
 
-          <div class="meta-item">
-            <label>文章属性</label>
-            <select v-model="form.type" class="meta-select">
+        <div class="form-group">
+          <label>文章属性</label>
+          <div class="article-type-row">
+            <select v-model="form.type" class="meta-select article-type-select">
               <option :value="0">普通文章</option>
               <option :value="1">置顶文章</option>
               <option :value="2">密码访问</option>
             </select>
-          </div>
-        </div>
 
-        <div v-if="form.type === 2" class="form-group">
-          <label>访问密码</label>
-          <input
-            v-model="form.access_password"
-            type="password"
-            class="meta-input"
-            :placeholder="hasExistingPassword ? '留空则保留原密码，输入新值则覆盖' : '请输入文章访问密码'"
-          />
-          <p class="field-tip">密码不会随文章详情接口返回，访客需先校验密码才能查看正文。</p>
+            <div v-if="form.type === 2" class="password-inline-group">
+              <input
+                v-model="form.access_password"
+                type="password"
+                class="meta-input"
+                :placeholder="hasExistingPassword ? '留空则保留原密码，输入新值则覆盖' : '请输入文章访问密码'"
+              />
+            </div>
+          </div>
+          <p v-if="form.type === 2" class="field-tip">密码不会随文章详情接口返回，访客需先校验密码才能查看正文。</p>
         </div>
 
         <div class="form-group">
@@ -462,7 +463,7 @@ watch(() => form.content, () => {
 
 .meta-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
 
@@ -504,6 +505,30 @@ watch(() => form.content, () => {
 
 .meta-input {
   cursor: pointer;
+}
+
+.article-type-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.article-type-select {
+  width: 220px;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+}
+
+.password-inline-group {
+  flex: 1;
 }
 
 .tags-selector {
