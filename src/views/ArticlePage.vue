@@ -149,6 +149,7 @@ import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
 import { useReadingStore } from '../stores/reading'
 import { articlesApi } from '../api/frontend'
+import { SITE_CONFIG } from '../config/site'
 import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
 import { hydrateArticleReferences, renderMarkdown } from '../utils/markdown'
 import { updateSeo, stripHtml, truncate } from '../utils/seo'
@@ -469,7 +470,7 @@ watch(
     const descriptionSource = article.value.summary || stripHtml(article.value.content)
     const description = article.value.needPassword
       ? `《${article.value.title}》为受保护文章，输入访问密码后才可查看完整内容。`
-      : truncate(descriptionSource || `${article.value.title} - MoZhi Blog`, 160)
+      : truncate(descriptionSource || `${article.value.title} - ${SITE_CONFIG.name}`, 160)
 
     const schema = article.value.needPassword
       ? null
@@ -480,11 +481,11 @@ watch(
           description,
           author: {
             '@type': 'Person',
-            name: 'MoZhi'
+            name: SITE_CONFIG.author.name
           },
           datePublished: article.value.date || undefined,
           dateModified: article.value.updateTime || article.value.date || undefined,
-          mainEntityOfPage: `https://blog.mozhi.top/article/${route.params.id}`,
+          mainEntityOfPage: `${SITE_CONFIG.url}/article/${route.params.id}`,
           articleSection: article.value.category || undefined,
           keywords: article.value.tagList.map(tag => tag.name).join(', ') || undefined
         }

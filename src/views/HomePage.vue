@@ -3,7 +3,7 @@
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-content">
-        <h1 class="hero-title">MoZhi's blog</h1>
+        <h1 class="hero-title">{{ SITE_CONFIG.shortName }}'s blog</h1>
         <p class="hero-subtitle" :class="{ hiding: !showSubtitle }" :key="currentSubtitleIndex">
           <span
             v-for="(char, index) in currentChars"
@@ -34,8 +34,8 @@
             <div class="author-avatar">
               <img src="@/assets/tx.jpg" alt="头像" />
             </div>
-            <h3 class="author-name">MoZhi</h3>
-            <p class="author-bio">远方很远，步履不停，未来可期</p>
+            <h3 class="author-name">{{ SITE_CONFIG.author.name }}</h3>
+            <p class="author-bio">{{ SITE_CONFIG.author.bio }}</p>
 
             <!-- 统计数据 -->
             <div class="author-intro-zone">
@@ -43,11 +43,11 @@
                 <div class="author-avatar">
                   <img src="@/assets/tx.jpg" alt="头像" />
                 </div>
-                <h3 class="author-name">MoZhi</h3>
-                <p class="author-bio">远方很远，步履不停，未来可期</p>
+                <h3 class="author-name">{{ SITE_CONFIG.author.name }}</h3>
+                <p class="author-bio">{{ SITE_CONFIG.author.bio }}</p>
               </div>
               <p class="author-intro-text">
-                Hi~欢迎光临MoZhi的个人博客，这里存放有技术分析、学习笔记、生活感悟等内容，还有一些好玩的效果，希望你可以在这里找到对你有用的知识和感悟
+                {{ SITE_CONFIG.author.intro }}
               </p>
             </div>
 
@@ -69,12 +69,12 @@
             </div>
 
             <div class="author-links">
-              <a href="https://github.com/mozhi-it" target="_blank" rel="noopener" class="author-btn" title="GitHub">
+              <a :href="SITE_CONFIG.author.socialLinks.github" target="_blank" rel="noopener" class="author-btn" title="GitHub">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                 </svg>
               </a>
-              <a href="mailto:mozhi.it@qq.com" class="author-btn" title="邮箱">
+              <a :href="SITE_CONFIG.author.socialLinks.email" class="author-btn" title="邮箱">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
@@ -125,6 +125,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import ArticleCard from '../components/common/ArticleCard.vue'
 import Pagination from '../components/common/Pagination.vue'
 import { articlesApi, categoriesApi, tagsApi } from '../api/frontend'
+import { SITE_CONFIG } from '../config/site'
 import { updateSeo } from '../utils/seo'
 
 // 问候语数据
@@ -254,8 +255,8 @@ watch(
   () => [stats.value.articleCount, stats.value.categoryCount, stats.value.tagCount],
   ([articleCount, categoryCount, tagCount]) => {
     const description = articleCount
-      ? `MoZhi 的个人博客，已发布 ${articleCount} 篇文章，覆盖 ${categoryCount} 个分类与 ${tagCount} 个标签，持续记录前端开发、编程实践与生活思考。`
-      : 'MoZhi 的个人博客，持续记录前端开发、编程实践、学习笔记与生活思考。'
+      ? `${SITE_CONFIG.title}，已发布 ${articleCount} 篇文章，覆盖 ${categoryCount} 个分类与 ${tagCount} 个标签，持续记录前端开发、编程实践与生活思考。`
+      : `${SITE_CONFIG.title}，持续记录前端开发、编程实践、学习笔记与生活思考。`
 
     updateSeo({
       title: '首页',

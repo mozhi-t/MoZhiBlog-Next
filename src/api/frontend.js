@@ -3,9 +3,10 @@
  * 不需要管理员Token
  */
 import axios from 'axios'
+import { SITE_API_BASE_URL } from '../config/site'
 
 const frontendApi = axios.create({
-  baseURL: '/api',
+  baseURL: SITE_API_BASE_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json'

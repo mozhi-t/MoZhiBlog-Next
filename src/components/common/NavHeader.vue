@@ -28,7 +28,7 @@
 
       <!-- Logo -->
       <router-link to="/" class="nav-logo" @click="closeMenu">
-        <span class="logo-text">MoZhi</span>
+        <span class="logo-text">{{ SITE_CONFIG.shortName }}</span>
       </router-link>
 
       <!-- Desktop Navigation -->
@@ -131,6 +131,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useThemeStore } from '../../stores/theme'
+import { SITE_CONFIG } from '../../config/site'
 
 const route = useRoute()
 const themeStore = useThemeStore()

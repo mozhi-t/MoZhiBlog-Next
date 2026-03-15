@@ -1,9 +1,9 @@
-// Twikoo 环境ID（替换为你自己的环境ID）
-export const TWIKOO_ENV_ID = 'https://twikoo-api.mozhix.top/'
+import { SITE_CONFIG } from './site'
 
-// 评论配置
+export const TWIKOO_ENV_ID = SITE_CONFIG.twikoo.envId
+
 export const TWIKOO_CONFIG = {
-  el: '#tcomment',
-  lang: 'zh-CN',
-  path: ''// 自定义路径（可在初始化时传入）
+  el: SITE_CONFIG.twikoo.el,
+  lang: SITE_CONFIG.twikoo.lang,
+  path: SITE_CONFIG.twikoo.path
 }

@@ -1,19 +1,15 @@
 <template>
   <div class="links-page">
-    <!-- Page Header -->
     <header class="page-header">
       <h1 class="page-title">友链</h1>
       <p class="page-desc">山海相逢，心意相通</p>
     </header>
 
-    <!-- Loading State -->
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
     </div>
 
-    <!-- Links by Category -->
     <div v-else>
-      <!-- Best Friends (挚友) -->
       <div v-if="bestFriends.length > 0" class="link-section">
         <h2 class="section-title">挚友</h2>
         <div class="links-grid">
@@ -22,6 +18,7 @@
             :key="'best-' + index"
             :href="link.url"
             target="_blank"
+            rel="noopener"
             class="link-card best-friend"
             :style="{ animationDelay: `${index * 0.1}s` }"
           >
@@ -36,7 +33,6 @@
         </div>
       </div>
 
-      <!-- Friends (朋友) -->
       <div v-if="friends.length > 0" class="link-section">
         <h2 class="section-title">朋友</h2>
         <div class="links-grid">
@@ -45,6 +41,7 @@
             :key="'friend-' + index"
             :href="link.url"
             target="_blank"
+            rel="noopener"
             class="link-card"
             :style="{ animationDelay: `${index * 0.1}s` }"
           >
@@ -59,7 +56,6 @@
         </div>
       </div>
 
-      <!-- Visitors (来客) -->
       <div v-if="visitors.length > 0" class="link-section">
         <h2 class="section-title">来客</h2>
         <div class="links-grid">
@@ -68,6 +64,7 @@
             :key="'visitor-' + index"
             :href="link.url"
             target="_blank"
+            rel="noopener"
             class="link-card"
             :style="{ animationDelay: `${index * 0.1}s` }"
           >
@@ -87,28 +84,24 @@
       </div>
     </div>
 
-    <!-- Contact Section -->
     <div class="contact-section">
       <h2 class="section-title">交换友链</h2>
-      <p class="contact-text">如果你想交换友链，可以在下方评论发出你的友链信息或用邮箱联系我，我看到之后会第一时间添加的</p>
+      <p class="contact-text">{{ SITE_CONFIG.friendLink.intro }}</p>
 
-      <!-- 默认友链信息 -->
       <div class="info-block">
         <h3 class="info-title">友链信息</h3>
-        <pre class="code-block">name: MoZhi's Blog
-link: https://blog.mozhi.top
-avatar: https://mozhi.s3.bitiful.net/cropped-tou.jpg
-descr: 远方很远，步履不停，未来可期</pre>
+        <pre class="code-block">name: {{ SITE_CONFIG.friendLink.siteName }}
+link: {{ SITE_CONFIG.friendLink.siteUrl }}
+avatar: {{ SITE_CONFIG.friendLink.avatar }}
+descr: {{ SITE_CONFIG.friendLink.description }}</pre>
       </div>
 
-      <!-- HTML版信息 -->
       <div class="info-block">
         <h3 class="info-title">HTML</h3>
-        <pre class="code-block">&lt;a href="https://blog.mozhi.top"&gt;&lt;img src="https://mozhi.s3.bitiful.net/cropped-tou.jpg" alt="avatar"&gt;MoZhi's Blog&lt;/a&gt;</pre>
+        <pre class="code-block">{{ friendLinkHtml }}</pre>
       </div>
     </div>
 
-    <!-- Twikoo Comments Section -->
     <section class="comments-section">
       <h2 class="section-title">评论</h2>
       <div id="twikoo-container">
@@ -119,54 +112,54 @@ descr: 远方很远，步履不停，未来可期</pre>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { friendLinksApi } from '../api/frontend'
-import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
+import { SITE_CONFIG } from '../config/site'
+import { TWIKOO_CONFIG, TWIKOO_ENV_ID } from '../config/twikoo'
 import { updateSeo } from '../utils/seo'
 
-// 加载状态
 const loading = ref(true)
-
-// 友链数据
 const links = ref([])
 
-// 按权重分类
-const bestFriends = computed(() => {
-  return links.value.filter(link => link.weight === 0).map(item => ({
+const bestFriends = computed(() =>
+  links.value.filter(link => link.weight === 0).map(item => ({
     name: item.username,
     description: item.signature || '暂无签名',
     url: item.link_url,
     avatar: item.icon_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${item.username}`
   }))
-})
+)
 
-const friends = computed(() => {
-  return links.value.filter(link => link.weight === 1).map(item => ({
+const friends = computed(() =>
+  links.value.filter(link => link.weight === 1).map(item => ({
     name: item.username,
     description: item.signature || '暂无签名',
     url: item.link_url,
     avatar: item.icon_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${item.username}`
   }))
-})
+)
 
-const visitors = computed(() => {
-  return links.value.filter(link => link.weight === 2).map(item => ({
+const visitors = computed(() =>
+  links.value.filter(link => link.weight === 2).map(item => ({
     name: item.username,
     description: item.signature || '暂无签名',
     url: item.link_url,
     avatar: item.icon_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${item.username}`
   }))
-})
+)
 
-// 从API加载数据
+const friendLinkHtml = computed(
+  () => `<a href="${SITE_CONFIG.friendLink.siteUrl}"><img src="${SITE_CONFIG.friendLink.avatar}" alt="avatar">${SITE_CONFIG.friendLink.siteName}</a>`
+)
+
 const loadLinks = async () => {
   try {
     loading.value = true
     const res = await friendLinksApi.list()
-    links.value = res.data
+    links.value = res.data || []
     updateSeo({
       title: '友链',
-      description: `浏览 MoZhi Blog 的友链页面，当前展示 ${res.data?.length || 0} 个站点，并支持留言申请互链。`,
+      description: `浏览 ${SITE_CONFIG.name} 的友链页面，当前展示 ${links.value.length} 个站点，并支持留言申请互链。`,
       path: '/links',
       keywords: ['友链', '友情链接', '博客推荐']
     })
@@ -177,27 +170,13 @@ const loadLinks = async () => {
   }
 }
 
-onMounted(() => {
-  updateSeo({
-    title: '友链',
-    description: '浏览 MoZhi Blog 的友链页面，发现值得访问的博客与站点，并支持留言申请互链。',
-    path: '/links',
-    keywords: ['友链', '友情链接', '博客推荐']
-  })
-  loadLinks()
-  initTwikoo()
-})
-
-// 初始化 Twikoo 评论
 const initTwikoo = () => {
   nextTick(() => {
-    // 如果 Twikoo 已经加载，直接初始化
     if (window.twikoo) {
       initTwikooInstance()
       return
     }
 
-    // 动态加载 Twikoo 脚本
     const script = document.createElement('script')
     script.src = '/twikoo.min.js'
     script.onload = () => {
@@ -210,7 +189,6 @@ const initTwikoo = () => {
   })
 }
 
-// 初始化 Twikoo 实例
 const initTwikooInstance = () => {
   if (!window.twikoo) {
     console.error('Twikoo 未正确加载')
@@ -224,19 +202,26 @@ const initTwikooInstance = () => {
     lang: TWIKOO_CONFIG.lang
   })
 }
+
+onMounted(() => {
+  updateSeo({
+    title: '友链',
+    description: `浏览 ${SITE_CONFIG.name} 的友链页面，发现值得访问的博客与站点，并支持留言申请互链。`,
+    path: '/links',
+    keywords: ['友链', '友情链接', '博客推荐']
+  })
+  loadLinks()
+  initTwikoo()
+})
 </script>
 
 <style lang="scss" scoped>
-/* ============================================
-   Links Page - 友链页
-   ============================================ */
 .links-page {
   max-width: var(--content-max-width);
   margin: 0 auto;
   padding: calc(var(--nav-height) + 40px) var(--spacing-lg) var(--spacing-3xl);
 }
 
-/* Page Header */
 .page-header {
   text-align: center;
   margin-bottom: var(--spacing-2xl);
@@ -254,7 +239,6 @@ const initTwikooInstance = () => {
   color: var(--color-text-secondary);
 }
 
-/* Links Grid */
 .links-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -331,7 +315,6 @@ const initTwikooInstance = () => {
   text-overflow: ellipsis;
 }
 
-/* Contact Section */
 .contact-section {
   padding: var(--spacing-xl);
   background: var(--color-bg-secondary);
@@ -393,7 +376,6 @@ const initTwikooInstance = () => {
   }
 }
 
-/* Loading & Empty States */
 .loading-state {
   display: flex;
   justify-content: center;

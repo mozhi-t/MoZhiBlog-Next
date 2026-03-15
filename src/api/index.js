@@ -3,9 +3,10 @@
  */
 import axios from 'axios'
 import { useAdminStore } from '@/stores/admin'
+import { SITE_API_BASE_URL } from '@/config/site'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: SITE_API_BASE_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
