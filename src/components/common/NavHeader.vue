@@ -21,7 +21,9 @@
   </div>
 
   <header class="nav-header" :class="{ scrolled: isScrolled, 'menu-open': menuOpen }">
-    <nav class="nav-container">
+    <nav class="nav-container" :class="navPromptClasses">
+      <div class="nav-radiance-core" aria-hidden="true"></div>
+
       <!-- Logo -->
       <router-link to="/" class="nav-logo" @click="closeMenu">
         <span class="logo-text">MoZhi</span>
@@ -104,6 +106,16 @@
           </li>
         </ul>
       </Transition>
+      <div
+        class="nav-prompt"
+        :class="[
+          promptType ? `is-${promptType}` : '',
+          { visible: isPromptTextVisible }
+        ]"
+        aria-live="polite"
+      >
+        {{ promptMessage }}
+      </div>
     </nav>
   </header>
 </template>
@@ -178,6 +190,134 @@ const searchHovered = ref(false)
 const searchQuery = ref('')
 const router = useRouter()
 
+const NAV_PROMPT_TYPES = {
+  copy: 'copy',
+  devtools: 'devtools'
+}
+
+const promptType = ref('')
+const isPromptBlurred = ref(false)
+const isPromptTextVisible = ref(false)
+const isPromptGradientVisible = ref(false)
+const isPromptGradientReversing = ref(false)
+const devtoolsOpened = ref(false)
+
+const promptTimers = new Set()
+let promptFrameId = null
+let devtoolsCheckTimer = null
+
+const BLUR_ENTER_DURATION = 300
+const GRADIENT_ENTER_DURATION = 400
+const HOLD_DURATION = 2000
+const EXIT_DURATION = 650
+const EXIT_STAGGER_DURATION = 200
+const DEVTOOLS_THRESHOLD = 160
+
+const promptMessage = computed(() => {
+  if (promptType.value === NAV_PROMPT_TYPES.copy) {
+    return '已复制文字 ✅'
+  }
+
+  if (promptType.value === NAV_PROMPT_TYPES.devtools) {
+    return '检测到调试工具打开 ⚠️'
+  }
+
+  return ''
+})
+
+const navPromptClasses = computed(() => ({
+  'is-prompt-active': Boolean(promptType.value),
+  'is-prompt-blurred': isPromptBlurred.value,
+  'is-prompt-gradient-visible': isPromptGradientVisible.value,
+  'is-prompt-gradient-reversing': isPromptGradientReversing.value,
+  'is-copy-prompt': promptType.value === NAV_PROMPT_TYPES.copy,
+  'is-devtools-prompt': promptType.value === NAV_PROMPT_TYPES.devtools
+}))
+
+const registerTimer = (callback, delay) => {
+  const timer = window.setTimeout(() => {
+    promptTimers.delete(timer)
+    callback()
+  }, delay)
+
+  promptTimers.add(timer)
+}
+
+const clearPromptTimers = () => {
+  promptTimers.forEach((timer) => window.clearTimeout(timer))
+  promptTimers.clear()
+}
+
+const resetPromptState = () => {
+  if (promptFrameId) {
+    cancelAnimationFrame(promptFrameId)
+    promptFrameId = null
+  }
+
+  clearPromptTimers()
+  isPromptBlurred.value = false
+  isPromptTextVisible.value = false
+  isPromptGradientVisible.value = false
+  isPromptGradientReversing.value = false
+  promptType.value = ''
+}
+
+const startPromptExit = () => {
+  isPromptGradientVisible.value = false
+  isPromptGradientReversing.value = true
+
+  registerTimer(() => {
+    isPromptTextVisible.value = false
+    isPromptBlurred.value = false
+  }, EXIT_STAGGER_DURATION)
+
+  registerTimer(() => {
+    isPromptGradientReversing.value = false
+    promptType.value = ''
+  }, EXIT_DURATION + EXIT_STAGGER_DURATION)
+}
+
+const triggerNavPrompt = (type) => {
+  resetPromptState()
+  promptType.value = type
+
+  promptFrameId = requestAnimationFrame(() => {
+    promptFrameId = null
+    isPromptBlurred.value = true
+
+    registerTimer(() => {
+      isPromptTextVisible.value = true
+      isPromptGradientVisible.value = true
+    }, BLUR_ENTER_DURATION)
+
+    registerTimer(() => {
+      startPromptExit()
+    }, BLUR_ENTER_DURATION + GRADIENT_ENTER_DURATION + HOLD_DURATION)
+  })
+}
+
+const handleCopy = () => {
+  const selectedText = window.getSelection?.()?.toString().trim()
+
+  if (!selectedText) {
+    return
+  }
+
+  triggerNavPrompt(NAV_PROMPT_TYPES.copy)
+}
+
+const detectDevtoolsOpen = () => {
+  const widthGap = window.outerWidth - window.innerWidth
+  const heightGap = window.outerHeight - window.innerHeight
+  const opened = widthGap > DEVTOOLS_THRESHOLD || heightGap > DEVTOOLS_THRESHOLD
+
+  if (opened && !devtoolsOpened.value) {
+    triggerNavPrompt(NAV_PROMPT_TYPES.devtools)
+  }
+
+  devtoolsOpened.value = opened
+}
+
 const handleSearch = () => {
   if (searchQuery.value.trim()) {
     router.push({ path: '/search', query: { q: searchQuery.value.trim() } })
@@ -192,15 +332,23 @@ const isActive = (path) => {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true })
+  window.addEventListener('copy', handleCopy)
   handleScroll()
   calculateFPS()
+  detectDevtoolsOpen()
+  devtoolsCheckTimer = window.setInterval(detectDevtoolsOpen, 1000)
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('copy', handleCopy)
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId)
   }
+  if (devtoolsCheckTimer) {
+    clearInterval(devtoolsCheckTimer)
+  }
+  resetPromptState()
 })
 </script>
 
@@ -238,7 +386,201 @@ onUnmounted(() => {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-nav);
   box-shadow: var(--shadow-nav);
-  transition: all var(--transition-smooth);
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    background 0.4s ease-in-out,
+    border-color 0.4s ease-in-out,
+    box-shadow 0.4s ease-in-out,
+    backdrop-filter 0.3s ease-in-out,
+    -webkit-backdrop-filter 0.3s ease-in-out;
+
+  > * {
+    position: relative;
+    z-index: 1;
+    transition:
+      filter 0.3s ease-in-out,
+      opacity 0.3s ease-in-out,
+      transform 0.3s ease-in-out;
+  }
+
+  .nav-radiance-core {
+    position: absolute;
+    left: 50%;
+    bottom: -18%;
+    z-index: 0;
+    width: 34%;
+    height: 68%;
+    border-radius: 999px;
+    opacity: 0;
+    transform: translateX(-50%) scale(0.12, 0.08);
+    transform-origin: 50% 100%;
+    transition:
+      transform 0.24s cubic-bezier(0.18, 0.88, 0.28, 1),
+      opacity 0.18s ease-out,
+      filter 0.24s ease-out;
+    filter: blur(14px) saturate(1.08) brightness(1.02);
+    pointer-events: none;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    opacity: 0;
+    clip-path: circle(0% at 50% 100%);
+    transition:
+      clip-path 0.4s cubic-bezier(0.22, 0.84, 0.24, 1),
+      opacity 0.4s ease-in-out,
+      filter 0.4s ease-in-out;
+    transition-delay: 0.18s;
+    filter: saturate(1.05);
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.42) 0%,
+        rgba(255, 255, 255, 0.3) 100%
+      );
+    backdrop-filter: blur(18px) saturate(145%);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    pointer-events: none;
+  }
+
+  &.is-prompt-blurred {
+    > :not(.nav-prompt) {
+      filter: blur(6px);
+      opacity: 0.34;
+    }
+
+    &::after {
+      opacity: 0.95;
+    }
+  }
+
+  &.is-prompt-gradient-visible::before {
+    opacity: 1;
+    clip-path: circle(150% at 50% 100%);
+    filter: saturate(1.2);
+  }
+
+  &.is-prompt-gradient-visible.is-copy-prompt {
+    background: rgba(214, 252, 227, 0.46);
+    box-shadow:
+      0 10px 22px rgba(22, 163, 74, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  }
+
+  &.is-prompt-gradient-visible.is-devtools-prompt {
+    background: rgba(254, 226, 226, 0.46);
+    box-shadow:
+      0 10px 22px rgba(220, 38, 38, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  }
+
+  &.is-prompt-gradient-visible .nav-radiance-core {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.9, 1.28);
+    filter: blur(18px) saturate(1.18) brightness(1.12);
+  }
+
+  &.is-prompt-gradient-reversing::before {
+    opacity: 0;
+    clip-path: circle(0% at 50% 100%);
+    transition-duration: 0.65s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-delay: 0s;
+  }
+
+  &.is-prompt-gradient-reversing .nav-radiance-core {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.12, 0.08);
+    transition-duration: 0.65s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  &.is-copy-prompt::before {
+    background: rgba(34, 197, 94, 0.9);
+  }
+
+  &.is-copy-prompt .nav-radiance-core {
+    background:
+      radial-gradient(
+        ellipse at 50% 100%,
+        rgba(220, 252, 231, 0.98) 0%,
+        rgba(134, 239, 172, 0.92) 28%,
+        rgba(74, 222, 128, 0.64) 52%,
+        rgba(34, 197, 94, 0) 78%
+      );
+  }
+
+  &.is-devtools-prompt::before {
+    background: rgba(239, 68, 68, 0.9);
+  }
+
+  &.is-devtools-prompt .nav-radiance-core {
+    background:
+      radial-gradient(
+        ellipse at 50% 100%,
+        rgba(254, 226, 226, 0.98) 0%,
+        rgba(252, 165, 165, 0.92) 28%,
+        rgba(248, 113, 113, 0.64) 52%,
+        rgba(239, 68, 68, 0) 78%
+      );
+  }
+}
+
+.nav-prompt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  min-width: 260px;
+  padding: 0 24px;
+  color: var(--color-text-primary);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.28);
+  transform: translate(-50%, 120%);
+  transition:
+    transform 0.3s ease-in-out,
+    opacity 0.3s ease-in-out,
+    color 0.4s ease-in-out;
+
+  &.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  &.is-copy {
+    color: #166534;
+  }
+
+  &.is-devtools {
+    color: #b91c1c;
+  }
 }
 
 /* FPS Display */
@@ -667,6 +1009,33 @@ onUnmounted(() => {
 [data-theme="dark"] {
   .nav-container {
     background: var(--glass-bg);
+  }
+
+  .nav-container.is-prompt-gradient-visible.is-copy-prompt {
+    background: rgba(20, 83, 45, 0.46);
+    box-shadow:
+      0 10px 22px rgba(22, 163, 74, 0.1),
+      inset 0 1px 0 rgba(220, 252, 231, 0.08);
+  }
+
+  .nav-container.is-prompt-gradient-visible.is-devtools-prompt {
+    background: rgba(127, 29, 29, 0.46);
+    box-shadow:
+      0 10px 22px rgba(220, 38, 38, 0.1),
+      inset 0 1px 0 rgba(254, 226, 226, 0.08);
+  }
+
+  .nav-prompt {
+    color: #f3f4f6;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+
+    &.is-copy {
+      color: #dcfce7;
+    }
+
+    &.is-devtools {
+      color: #fee2e2;
+    }
   }
 }
 </style>
