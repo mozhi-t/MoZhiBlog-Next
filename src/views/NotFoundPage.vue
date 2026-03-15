@@ -24,6 +24,14 @@
 </template>
 
 <script setup>
+import { updateSeo } from '../utils/seo'
+
+updateSeo({
+  title: '页面未找到',
+  description: '当前访问的页面不存在、已被删除或链接地址有误。',
+  path: window.location.pathname,
+  noindex: true
+})
 </script>
 
 <style lang="scss" scoped>

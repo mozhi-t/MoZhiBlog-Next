@@ -121,10 +121,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import ArticleCard from '../components/common/ArticleCard.vue'
 import Pagination from '../components/common/Pagination.vue'
 import { articlesApi, categoriesApi, tagsApi } from '../api/frontend'
+import { updateSeo } from '../utils/seo'
 
 // 问候语数据
 const greetingData = {
@@ -248,6 +249,23 @@ const stats = ref({
   categoryCount: 0,
   tagCount: 0
 })
+
+watch(
+  () => [stats.value.articleCount, stats.value.categoryCount, stats.value.tagCount],
+  ([articleCount, categoryCount, tagCount]) => {
+    const description = articleCount
+      ? `MoZhi 的个人博客，已发布 ${articleCount} 篇文章，覆盖 ${categoryCount} 个分类与 ${tagCount} 个标签，持续记录前端开发、编程实践与生活思考。`
+      : 'MoZhi 的个人博客，持续记录前端开发、编程实践、学习笔记与生活思考。'
+
+    updateSeo({
+      title: '首页',
+      description,
+      path: '/',
+      keywords: ['首页', '博客首页', '前端博客']
+    })
+  },
+  { immediate: true }
+)
 
 // 加载文章列表
 const loadArticles = async (page = 1) => {

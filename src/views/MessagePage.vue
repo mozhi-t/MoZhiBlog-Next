@@ -18,6 +18,7 @@
 <script setup>
 import { onMounted, nextTick } from 'vue'
 import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
+import { updateSeo } from '../utils/seo'
 
 // 初始化 Twikoo 评论（作为留言板）
 const initTwikoo = () => {
@@ -57,6 +58,12 @@ const initTwikooInstance = () => {
 }
 
 onMounted(() => {
+  updateSeo({
+    title: '留言板',
+    description: '在留言板页面留下你的想法、建议与交流内容，和 MoZhi Blog 产生互动。',
+    path: '/message',
+    keywords: ['留言板', '评论', '互动']
+  })
   initTwikoo()
 })
 </script>

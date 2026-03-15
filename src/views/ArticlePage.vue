@@ -151,6 +151,7 @@ import { useReadingStore } from '../stores/reading'
 import { articlesApi } from '../api/frontend'
 import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
 import { hydrateArticleReferences, renderMarkdown } from '../utils/markdown'
+import { updateSeo, stripHtml, truncate } from '../utils/seo'
 
 // 配置 marked 使用 highlight.js
 const marked = new Marked(
@@ -194,6 +195,7 @@ const verifyingPassword = ref(false)
 const article = ref({
   id: route.params.id,
   title: '',
+  summary: '',
   date: '',
   updateTime: '',
   category: '',
@@ -239,6 +241,7 @@ const loadArticle = async () => {
     article.value = {
       id: data.id,
       title: data.title,
+      summary: data.summary || '',
       date: data.create_time,
       updateTime: data.update_time,
       category: data.category?.name || '',
@@ -435,6 +438,77 @@ const formatDate = (date, includeTime = false) => {
     day: 'numeric'
   })
 }
+
+watch(
+  () => [
+    route.params.id,
+    loading.value,
+    notFound.value,
+    article.value.title,
+    article.value.summary,
+    article.value.content,
+    article.value.category,
+    article.value.needPassword,
+    article.value.date,
+    article.value.updateTime,
+    article.value.tagList
+  ],
+  () => {
+    if (loading.value) return
+
+    if (notFound.value) {
+      updateSeo({
+        title: '文章不存在',
+        description: '当前访问的文章不存在、已被删除，或暂时无法查看。',
+        path: `/article/${route.params.id}`,
+        noindex: true
+      })
+      return
+    }
+
+    const descriptionSource = article.value.summary || stripHtml(article.value.content)
+    const description = article.value.needPassword
+      ? `《${article.value.title}》为受保护文章，输入访问密码后才可查看完整内容。`
+      : truncate(descriptionSource || `${article.value.title} - MoZhi Blog`, 160)
+
+    const schema = article.value.needPassword
+      ? null
+      : {
+          '@context': 'https://schema.org',
+          '@type': 'BlogPosting',
+          headline: article.value.title,
+          description,
+          author: {
+            '@type': 'Person',
+            name: 'MoZhi'
+          },
+          datePublished: article.value.date || undefined,
+          dateModified: article.value.updateTime || article.value.date || undefined,
+          mainEntityOfPage: `https://blog.mozhi.top/article/${route.params.id}`,
+          articleSection: article.value.category || undefined,
+          keywords: article.value.tagList.map(tag => tag.name).join(', ') || undefined
+        }
+
+    updateSeo({
+      title: article.value.title || '文章详情',
+      description,
+      path: `/article/${route.params.id}`,
+      type: 'article',
+      keywords: [
+        '文章',
+        article.value.category,
+        ...article.value.tagList.map(tag => tag.name)
+      ].filter(Boolean),
+      noindex: article.value.needPassword,
+      publishedTime: article.value.date,
+      modifiedTime: article.value.updateTime || article.value.date,
+      section: article.value.category,
+      tags: article.value.tagList.map(tag => tag.name),
+      schema
+    })
+  },
+  { deep: true, immediate: true }
+)
 
 // Watch route changes
 watch(() => route.params.id, () => {

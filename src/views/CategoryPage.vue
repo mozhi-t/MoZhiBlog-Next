@@ -50,6 +50,7 @@ import { useRoute, useRouter } from 'vue-router'
 import ArticleCard from '../components/common/ArticleCard.vue'
 import Pagination from '../components/common/Pagination.vue'
 import { articlesApi, categoriesApi } from '../api/frontend'
+import { updateSeo } from '../utils/seo'
 
 const route = useRoute()
 const router = useRouter()
@@ -137,6 +138,24 @@ const handlePageChange = (page) => {
   loadArticles(page)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+watch(
+  () => [categoryId.value, currentTitle.value, total.value],
+  ([id, title, articleTotal]) => {
+    const path = id ? `/category?category=${id}` : '/category'
+    const description = id
+      ? `${title} 分类下当前共有 ${articleTotal} 篇文章，聚合展示该主题的最新内容与相关文章。`
+      : `浏览博客的全部分类，目前共收录 ${categories.value.length} 个分类，方便按主题查找文章。`
+
+    updateSeo({
+      title: id ? `${title} 分类` : '分类',
+      description,
+      path,
+      keywords: id ? ['分类', title, `${title} 分类`] : ['分类', '文章分类', '博客分类']
+    })
+  },
+  { immediate: true }
+)
 
 // 监听分类变化
 watch(categoryId, () => {

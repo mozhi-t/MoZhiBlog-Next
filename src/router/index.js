@@ -1,12 +1,10 @@
 /**
  * Vue Router Configuration
- * 路由配置 - 包含页面切换动效
  */
 import { createRouter, createWebHistory } from 'vue-router'
-
-// 导入后台路由
 import adminRouter from './admin'
 import { useAdminStore } from '@/stores/admin'
+import { updateSeo } from '@/utils/seo'
 
 const routes = [
   {
@@ -71,7 +69,6 @@ const routes = [
   }
 ]
 
-// 合并路由
 const allRoutes = [...routes, ...adminRouter.options.routes]
 
 const router = createRouter({
@@ -80,43 +77,41 @@ const router = createRouter({
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
       return savedPosition
-    } else if (to.hash) {
-      // 平滑滚动到锚点
+    }
+
+    if (to.hash) {
       return {
         el: to.hash,
         behavior: 'smooth',
-        top: 80 // 留出导航栏空间
+        top: 80
       }
-    } else {
-      // 路由切换时回到顶部
-      return { top: 0, behavior: 'smooth' }
     }
+
+    return { top: 0, behavior: 'smooth' }
   }
 })
 
-// 路由守卫
 router.beforeEach(async (to, from, next) => {
   const adminStore = useAdminStore()
 
-  // 设置页面标题
-  document.title = `${to.meta.title || '首页'} | MoZhi Blog`
+  updateSeo({
+    title: to.meta.title || '首页',
+    path: to.fullPath,
+    noindex: to.path.startsWith('/admin')
+  })
 
-  // 公开页面直接通过（登录页）
   if (to.meta.public) {
-    // 如果已登录且访问登录页，重定向到后台首页
     if (to.path === '/admin/login' && adminStore.token) {
       return next('/admin/dashboard')
     }
     return next()
   }
 
-  // 需要登录的页面（所有 /admin 下的页面，除了登录页）
   if (to.path.startsWith('/admin') && to.path !== '/admin/login') {
     if (!adminStore.token) {
       return next('/admin/login')
     }
 
-    // 如果没有管理员信息，先获取
     if (!adminStore.adminInfo) {
       try {
         await adminStore.getInfo()

@@ -54,6 +54,7 @@ import { useRoute, useRouter } from 'vue-router'
 import ArticleCard from '../components/common/ArticleCard.vue'
 import Pagination from '../components/common/Pagination.vue'
 import { articlesApi } from '../api/frontend'
+import { updateSeo } from '../utils/seo'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,6 +111,22 @@ watch(
     keyword.value = newQ || ''
     currentPage.value = 1
     fetchArticles()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => [keyword.value, total.value],
+  ([currentKeyword, articleTotal]) => {
+    updateSeo({
+      title: currentKeyword ? `搜索：${currentKeyword}` : '搜索',
+      description: currentKeyword
+        ? `站内搜索“${currentKeyword}”的结果页，共找到 ${articleTotal} 篇相关文章。`
+        : '站内文章搜索页，用于按关键词查找博客内容。',
+      path: currentKeyword ? `/search?q=${encodeURIComponent(currentKeyword)}` : '/search',
+      keywords: ['搜索', currentKeyword].filter(Boolean),
+      noindex: true
+    })
   },
   { immediate: true }
 )

@@ -1,12 +1,10 @@
 <template>
   <div class="tag-page">
-    <!-- Page Header -->
     <header class="page-header">
       <h1 class="page-title">标签</h1>
       <p class="page-description">共 {{ tags.length }} 个标签</p>
     </header>
 
-    <!-- Tags Grid -->
     <div class="tags-grid">
       <div
         v-for="tag in tags"
@@ -20,12 +18,10 @@
       </div>
     </div>
 
-    <!-- Empty State -->
     <div v-if="tags.length === 0 && !loading" class="empty-state">
       <p>暂无标签</p>
     </div>
 
-    <!-- Selected Tag Articles -->
     <div v-if="selectedTag && articles.length > 0" class="tag-articles">
       <h2 class="section-title">{{ selectedTagName }} 下的文章</h2>
       <div class="articles-list">
@@ -36,7 +32,6 @@
         />
       </div>
 
-      <!-- Pagination -->
       <Pagination
         v-if="total > pageSize"
         :current-page="currentPage"
@@ -49,28 +44,32 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import ArticleCard from '../components/common/ArticleCard.vue'
 import Pagination from '../components/common/Pagination.vue'
 import { tagsApi, articlesApi } from '../api/frontend'
+import { updateSeo } from '../utils/seo'
 
+const route = useRoute()
 const router = useRouter()
 
 const tags = ref([])
 const loading = ref(true)
-const selectedTag = ref(null)
 const articles = ref([])
 const currentPage = ref(1)
 const total = ref(0)
 const pageSize = 20
 
+const selectedTag = computed(() => {
+  const id = route.query.tag
+  return id ? parseInt(id, 10) : null
+})
+
 const selectedTagName = computed(() => {
-  if (selectedTag.value) {
-    const tag = tags.value.find(t => t.id === selectedTag.value)
-    return tag ? tag.name : ''
-  }
-  return ''
+  if (!selectedTag.value) return ''
+  const tag = tags.value.find(item => item.id === selectedTag.value)
+  return tag ? tag.name : ''
 })
 
 const loadTags = async () => {
@@ -86,16 +85,13 @@ const loadTags = async () => {
   }
 }
 
-const selectTag = async (tag) => {
+const selectTag = (tag) => {
   if (selectedTag.value === tag.id) {
-    // 取消选择
-    selectedTag.value = null
-    articles.value = []
-    total.value = 0
-  } else {
-    selectedTag.value = tag.id
-    loadArticlesByTag(tag.id, 1)
+    router.push('/tag')
+    return
   }
+
+  router.push(`/tag?tag=${tag.id}`)
 }
 
 const loadArticlesByTag = async (tagId, page = 1) => {
@@ -120,7 +116,7 @@ const loadArticlesByTag = async (tagId, page = 1) => {
     total.value = res.data.total || 0
     currentPage.value = page
   } catch (error) {
-    console.error('加载文章失败:', error)
+    console.error('加载标签文章失败:', error)
     articles.value = []
     total.value = 0
   }
@@ -130,6 +126,41 @@ const handlePageChange = (page) => {
   loadArticlesByTag(selectedTag.value, page)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+watch(
+  () => selectedTag.value,
+  (tagId) => {
+    currentPage.value = 1
+
+    if (!tagId) {
+      articles.value = []
+      total.value = 0
+      return
+    }
+
+    loadArticlesByTag(tagId, 1)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  },
+  { immediate: true }
+)
+
+watch(
+  () => [selectedTag.value, selectedTagName.value, total.value, tags.value.length],
+  ([tagId, tagName, articleTotal, tagTotal]) => {
+    const path = tagId ? `/tag?tag=${tagId}` : '/tag'
+    const description = tagId
+      ? `查看标签“${tagName}”下的 ${articleTotal} 篇相关文章，快速聚合同主题内容。`
+      : `浏览博客全部标签，目前共收录 ${tagTotal} 个标签，方便快速定位相关文章。`
+
+    updateSeo({
+      title: tagId ? `${tagName} 标签` : '标签',
+      description,
+      path,
+      keywords: tagId ? ['标签', tagName, `${tagName} 标签`] : ['标签', '文章标签', '博客标签']
+    })
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   loadTags()
@@ -146,7 +177,6 @@ onMounted(() => {
   padding: calc(var(--nav-height) + 40px) var(--spacing-lg) var(--spacing-3xl);
 }
 
-/* Page Header */
 .page-header {
   text-align: center;
   margin-bottom: var(--spacing-2xl);
@@ -164,7 +194,6 @@ onMounted(() => {
   color: var(--color-text-tertiary);
 }
 
-/* Tags Grid */
 .tags-grid {
   display: flex;
   flex-wrap: wrap;
@@ -206,7 +235,6 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* Selected Tag Articles */
 .tag-articles {
   margin-top: var(--spacing-2xl);
 }
@@ -244,7 +272,6 @@ onMounted(() => {
   }
 }
 
-/* Empty State */
 .empty-state {
   text-align: center;
   padding: var(--spacing-3xl);

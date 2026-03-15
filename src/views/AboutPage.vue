@@ -47,8 +47,16 @@
 <script setup>
 import { ref } from 'vue'
 import { useIntersectionObserver } from '../composables/useObserver'
+import { updateSeo } from '../utils/seo'
 
 const { targetRef, isVisible } = useIntersectionObserver({ threshold: 0.2 })
+
+updateSeo({
+  title: '关于',
+  description: '了解 MoZhi 的个人背景、博客定位、技术栈与联系方式。',
+  path: '/about',
+  keywords: ['关于', '作者介绍', '博客简介']
+})
 
 const sections = ref([
   {

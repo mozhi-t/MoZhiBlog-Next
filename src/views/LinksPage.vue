@@ -122,6 +122,7 @@ descr: 远方很远，步履不停，未来可期</pre>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { friendLinksApi } from '../api/frontend'
 import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
+import { updateSeo } from '../utils/seo'
 
 // 加载状态
 const loading = ref(true)
@@ -163,6 +164,12 @@ const loadLinks = async () => {
     loading.value = true
     const res = await friendLinksApi.list()
     links.value = res.data
+    updateSeo({
+      title: '友链',
+      description: `浏览 MoZhi Blog 的友链页面，当前展示 ${res.data?.length || 0} 个站点，并支持留言申请互链。`,
+      path: '/links',
+      keywords: ['友链', '友情链接', '博客推荐']
+    })
   } catch (error) {
     console.error('加载友链失败:', error)
   } finally {
@@ -171,6 +178,12 @@ const loadLinks = async () => {
 }
 
 onMounted(() => {
+  updateSeo({
+    title: '友链',
+    description: '浏览 MoZhi Blog 的友链页面，发现值得访问的博客与站点，并支持留言申请互链。',
+    path: '/links',
+    keywords: ['友链', '友情链接', '博客推荐']
+  })
   loadLinks()
   initTwikoo()
 })

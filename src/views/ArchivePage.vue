@@ -1,17 +1,14 @@
 <template>
   <div class="archive-page">
-    <!-- Page Header -->
     <header class="page-header">
       <h1 class="page-title">归档</h1>
-      <p class="page-description">时光流转，文字永存</p>
+      <p class="page-description">时光流转，文字长存</p>
     </header>
 
-    <!-- Loading State -->
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
     </div>
 
-    <!-- Timeline -->
     <div v-else class="timeline">
       <div
         v-for="(yearGroup, year) in archiveData"
@@ -26,7 +23,7 @@
           <span class="year-label">{{ year }}</span>
           <span class="year-count">{{ yearGroup.length }} 篇</span>
           <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M6 9l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 9l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
 
@@ -57,58 +54,57 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { articlesApi } from '../api/frontend'
+import { updateSeo } from '../utils/seo'
 
-// 加载状态
 const loading = ref(true)
-
-// 文章归档数据
 const articles = ref([])
 
-// 从API加载数据
 const loadArticles = async () => {
   try {
     loading.value = true
-    // 获取所有文章（分页获取较多数据）
     const res = await articlesApi.list({ page: 1, size: 100 })
-    articles.value = res.data.items.map(item => ({
+    articles.value = (res.data.items || []).map(item => ({
       id: item.id,
       title: item.title,
       date: new Date(item.create_time)
     }))
   } catch (error) {
-    console.error('加载文章失败:', error)
+    console.error('加载归档失败:', error)
   } finally {
     loading.value = false
   }
 }
 
-// 按年份分组
 const archiveData = computed(() => {
   const groups = {}
+
   articles.value.forEach(article => {
     const year = article.date.getFullYear().toString()
     const monthDay = `${String(article.date.getMonth() + 1).padStart(2, '0')}-${String(article.date.getDate()).padStart(2, '0')}`
+
     if (!groups[year]) {
       groups[year] = []
     }
+
     groups[year].push({
       id: article.id,
       title: article.title,
       date: monthDay
     })
   })
-  // 按年份降序排列
+
   const sortedGroups = {}
-  Object.keys(groups).sort((a, b) => b - a).forEach(key => {
+  Object.keys(groups).sort((a, b) => b - a).forEach((key) => {
     sortedGroups[key] = groups[key]
   })
+
   return sortedGroups
 })
 
-// Expanded years state
+const totalArticles = computed(() => articles.value.length)
+const yearCount = computed(() => Object.keys(archiveData.value).length)
 const expandedYears = ref(['2024'])
 
-// Toggle year expansion
 const toggleYear = (year) => {
   const index = expandedYears.value.indexOf(year)
   if (index > -1) {
@@ -120,8 +116,13 @@ const toggleYear = (year) => {
 
 onMounted(() => {
   loadArticles().then(() => {
-    // 加载完成后展开所有年份
     expandedYears.value = Object.keys(archiveData.value)
+    updateSeo({
+      title: '归档',
+      description: `按时间轴浏览博客归档内容，当前收录 ${totalArticles.value} 篇文章，跨越 ${yearCount.value} 个年份。`,
+      path: '/archive',
+      keywords: ['归档', '文章归档', '时间轴']
+    })
   })
 })
 </script>
@@ -136,7 +137,6 @@ onMounted(() => {
   padding: calc(var(--nav-height) + 40px) var(--spacing-lg) var(--spacing-3xl);
 }
 
-/* Page Header */
 .page-header {
   text-align: center;
   margin-bottom: var(--spacing-2xl);
@@ -154,7 +154,6 @@ onMounted(() => {
   color: var(--color-text-tertiary);
 }
 
-/* Timeline */
 .timeline {
   position: relative;
   padding-left: var(--spacing-xl);
@@ -222,7 +221,6 @@ onMounted(() => {
   transition: transform var(--transition-base);
 }
 
-/* Year Articles */
 .year-articles {
   list-style: none;
   margin-top: var(--spacing-md);
@@ -236,6 +234,7 @@ onMounted(() => {
   padding: var(--spacing-sm) 0;
   opacity: 0;
   animation: fadeIn 0.3s ease forwards;
+  position: relative;
 
   &::before {
     content: '';
@@ -281,7 +280,6 @@ onMounted(() => {
   }
 }
 
-/* Expand Animation */
 .expand-enter-active,
 .expand-leave-active {
   transition: all var(--transition-smooth);
@@ -309,7 +307,6 @@ onMounted(() => {
   }
 }
 
-/* Loading & Empty States */
 .loading-state {
   display: flex;
   justify-content: center;
