@@ -16,41 +16,49 @@ router = APIRouter(prefix="/api/admin", tags=["管理员"])
 MAX_LOGIN_ATTEMPTS = 5  # 最大登录失败次数
 
 
+def build_login_error(message: str, remaining_attempts: int, is_blocked: bool = False):
+    return {
+        "message": message,
+        "remaining_attempts": max(remaining_attempts, 0),
+        "max_attempts": MAX_LOGIN_ATTEMPTS,
+        "is_blocked": is_blocked,
+    }
+
+
 @router.post("/login")
 def admin_login(request: Request, admin_data: AdminLogin, db: Session = Depends(get_db)):
     # 获取客户端IP
     client_ip = request.client.host
     logger.info(f"管理员登录尝试 - username: {admin_data.username}, ip: {client_ip}")
 
-    # 检查IP是否在黑名单中
+    # 检查IP是否已被拉黑
     blacklist_entry = db.query(Blacklist).filter(Blacklist.ip == client_ip).first()
-    if blacklist_entry:
+    if blacklist_entry and blacklist_entry.failed_attempts >= MAX_LOGIN_ATTEMPTS:
         logger.warning(f"登录失败 - IP在黑名单中, ip: {client_ip}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="您已被拉黑，请联系管理员"
+            detail=build_login_error("您已被拉黑，请联系管理员", 0, True)
         )
 
     admin = db.query(Admin).filter(Admin.username == admin_data.username).first()
     if not admin:
-        # 用户不存在
-        increment_failed_attempts(client_ip, db)
+        failed_attempts = increment_failed_attempts(client_ip, db)
+        remaining_attempts = MAX_LOGIN_ATTEMPTS - failed_attempts
         logger.warning(f"登录失败 - 用户不存在, username: {admin_data.username}, ip: {client_ip}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户名或密码错误"
+            detail=build_login_error("用户名或密码错误", remaining_attempts)
         )
 
     if not verify_password(admin_data.password, admin.password):
-        # 密码错误
-        increment_failed_attempts(client_ip, db)
+        failed_attempts = increment_failed_attempts(client_ip, db)
+        remaining_attempts = MAX_LOGIN_ATTEMPTS - failed_attempts
         logger.warning(f"登录失败 - 密码错误, username: {admin_data.username}, ip: {client_ip}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户名或密码错误"
+            detail=build_login_error("用户名或密码错误", remaining_attempts)
         )
 
-    # 登录成功
     if blacklist_entry:
         db.delete(blacklist_entry)
         db.commit()
@@ -83,14 +91,6 @@ def increment_failed_attempts(ip: str, db: Session):
 
     if blacklist_entry:
         blacklist_entry.failed_attempts += 1
-        if blacklist_entry.failed_attempts >= MAX_LOGIN_ATTEMPTS:
-            # 已达到最大失败次数
-            db.commit()
-            logger.warning(f"IP已被拉黑 - ip: {ip}, failed_attempts: {blacklist_entry.failed_attempts}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="您已被拉黑，请联系管理员"
-            )
     else:
         blacklist_entry = Blacklist(
             ip=ip,
@@ -100,6 +100,7 @@ def increment_failed_attempts(ip: str, db: Session):
 
     db.commit()
     logger.warning(f"登录失败次数+1 - ip: {ip}, failed_attempts: {blacklist_entry.failed_attempts}")
+    return blacklist_entry.failed_attempts
 
 
 @router.get("/me")

@@ -42,7 +42,7 @@ api.interceptors.response.use(
   },
   error => {
     // 处理401/403错误
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    if ((error.response?.status === 401 || error.response?.status === 403) && error.config?.url !== '/admin/login') {
       const adminStore = useAdminStore()
       adminStore.logout()
       window.location.href = '/admin/login'

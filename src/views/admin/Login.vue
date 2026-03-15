@@ -27,14 +27,17 @@
           />
         </div>
 
-        <div v-if="errorMsg" class="error-tip">{{ errorMsg }}</div>
+        <div v-if="errorMsg" class="error-tip">
+          <div>{{ errorMsg }}</div>
+          <div v-if="attemptsTip" class="attempts-tip">{{ attemptsTip }}</div>
+        </div>
 
         <button
           type="submit"
           class="login-btn"
           :disabled="loading"
         >
-          {{ loading ? '登录中...' : '登 录' }}
+          {{ loading ? '登录中...' : '登录' }}
         </button>
       </form>
     </div>
@@ -42,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 
@@ -56,16 +59,29 @@ const form = reactive({
 
 const loading = ref(false)
 const errorMsg = ref('')
+const attemptsTip = ref('')
 
 const handleLogin = async () => {
   errorMsg.value = ''
+  attemptsTip.value = ''
   loading.value = true
 
   try {
     await adminStore.login(form.username, form.password)
     router.push('/admin/dashboard')
   } catch (error) {
-    errorMsg.value = error.message || '登录失败，请检查用户名和密码'
+    const detail = error.response?.data?.detail
+    if (typeof detail === 'object' && detail !== null) {
+      errorMsg.value = detail.message || '登录失败，请检查用户名和密码'
+      if (typeof detail.remaining_attempts === 'number' && !detail.is_blocked) {
+        attemptsTip.value = `还可尝试 ${detail.remaining_attempts} 次`
+      }
+      if (detail.is_blocked) {
+        attemptsTip.value = '当前 IP 已被拉黑'
+      }
+    } else {
+      errorMsg.value = error.message || '登录失败，请检查用户名和密码'
+    }
   } finally {
     loading.value = false
   }
@@ -98,6 +114,7 @@ const handleLogin = async () => {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -157,6 +174,11 @@ const handleLogin = async () => {
   font-size: var(--font-size-sm);
   text-align: center;
   padding: var(--spacing-sm);
+}
+
+.attempts-tip {
+  margin-top: 6px;
+  color: var(--color-text-secondary);
 }
 
 .login-btn {

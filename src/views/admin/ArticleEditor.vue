@@ -1,6 +1,5 @@
 <template>
   <div class="editor-page">
-    <!-- 顶部导航 -->
     <div class="editor-header">
       <button class="back-btn" @click="goBack">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -16,18 +15,14 @@
       </div>
     </div>
 
-    <!-- 消息提示 -->
     <Transition name="fade">
       <div v-if="message.show" class="message-toast" :class="message.type">
         {{ message.text }}
       </div>
     </Transition>
 
-    <!-- 编辑器主体 -->
     <div class="editor-body">
-      <!-- 左侧编辑区 -->
       <div class="editor-main">
-        <!-- 标题 -->
         <div class="form-group">
           <label>标题</label>
           <input
@@ -38,7 +33,6 @@
           />
         </div>
 
-        <!-- 摘要 -->
         <div class="form-group">
           <label>摘要</label>
           <textarea
@@ -49,7 +43,6 @@
           ></textarea>
         </div>
 
-        <!-- 元信息 -->
         <div class="meta-row">
           <div class="meta-item">
             <label>分类</label>
@@ -100,7 +93,6 @@
           <p class="field-tip">密码不会随文章详情接口返回，访客需先校验密码才能查看正文。</p>
         </div>
 
-        <!-- 标签多选 -->
         <div class="form-group">
           <label>标签</label>
           <div class="tags-selector">
@@ -117,7 +109,6 @@
           </div>
         </div>
 
-        <!-- 内容编辑器 -->
         <div class="editor-container">
           <div class="editor-pane">
             <div class="pane-header">
@@ -126,14 +117,14 @@
             <textarea
               v-model="form.content"
               class="content-editor"
-              placeholder="请输入文章内容 (支持 Markdown)"
+              placeholder="请输入文章内容（支持 Markdown）"
             ></textarea>
           </div>
           <div class="preview-pane">
             <div class="pane-header">
               <span>预览</span>
             </div>
-            <div class="preview-content" v-html="previewContent"></div>
+            <div ref="previewRef" class="preview-content markdown-content" v-html="previewContent"></div>
           </div>
         </div>
       </div>
@@ -142,18 +133,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { marked } from 'marked'
 import { articleApi, categoryApi, tagApi } from '@/api'
+import { enhanceCodeBlocks, renderMarkdown } from '@/utils/markdown'
 
 const route = useRoute()
 const router = useRouter()
 
-// 判断是编辑还是新增
 const isEditing = computed(() => !!route.params.id)
 
-// 表单数据
 const form = reactive({
   title: '',
   summary: '',
@@ -166,26 +155,28 @@ const form = reactive({
   update_time: ''
 })
 
-// 数据
 const categories = ref([])
 const tags = ref([])
 const submitting = ref(false)
 const hasExistingPassword = ref(false)
+const previewRef = ref(null)
 
-// 消息提示
 const message = ref({
   show: false,
   text: '',
-  type: 'success' // 'success' | 'error'
+  type: 'success'
 })
 
-// 预览内容
 const previewContent = computed(() => {
   if (!form.content) return '<p class="empty-preview">预览内容...</p>'
-  return marked(form.content)
+  return renderMarkdown(form.content)
 })
 
-// 加载分类
+const syncPreviewDecorations = async () => {
+  await nextTick()
+  enhanceCodeBlocks(previewRef.value)
+}
+
 const loadCategories = async () => {
   try {
     const res = await categoryApi.list()
@@ -195,7 +186,6 @@ const loadCategories = async () => {
   }
 }
 
-// 加载标签
 const loadTags = async () => {
   try {
     const res = await tagApi.list()
@@ -205,7 +195,6 @@ const loadTags = async () => {
   }
 }
 
-// 切换标签选中状态
 const toggleTag = (tagId) => {
   const index = form.tag_ids.indexOf(tagId)
   if (index > -1) {
@@ -215,7 +204,11 @@ const toggleTag = (tagId) => {
   }
 }
 
-// 加载文章详情（编辑时）
+const formatDateForInput = (dateStr) => {
+  if (!dateStr) return ''
+  return dateStr.replace('Z', '').slice(0, 16)
+}
+
 const loadArticle = async () => {
   if (!isEditing.value) return
 
@@ -230,13 +223,8 @@ const loadArticle = async () => {
     form.type = data.type ?? 0
     hasExistingPassword.value = !!data.has_password
     form.access_password = ''
+    form.tag_ids = data.tag_list?.map(tag => tag.id) || []
 
-    // 设置标签
-    if (data.tag_list && data.tag_list.length > 0) {
-      form.tag_ids = data.tag_list.map(t => t.id)
-    }
-
-    // 格式化时间
     if (data.create_time) {
       form.create_time = formatDateForInput(data.create_time)
     }
@@ -250,20 +238,10 @@ const loadArticle = async () => {
   }
 }
 
-// 格式化时间为 datetime-local 输入框格式
-// 后端返回的是本地时间字符串（如 "2024-03-12T00:00:00"），直接截取即可
-const formatDateForInput = (dateStr) => {
-  if (!dateStr) return ''
-  // 直接处理字符串，去掉可能的 Z 后缀，截取到分钟
-  return dateStr.replace('Z', '').slice(0, 16)
-}
-
-// 返回列表
 const goBack = () => {
   router.push('/admin/articles')
 }
 
-// 显示消息提示
 const showMessage = (text, type = 'success') => {
   message.value = {
     show: true,
@@ -275,7 +253,6 @@ const showMessage = (text, type = 'success') => {
   }, 2000)
 }
 
-// 保存文章
 const handleSubmit = async () => {
   if (!form.title || !form.content) {
     showMessage('请填写标题和内容', 'error')
@@ -301,9 +278,6 @@ const handleSubmit = async () => {
     if (form.type === 2 && form.access_password.trim()) {
       data.access_password = form.access_password.trim()
     }
-
-    // 如果填写了时间，则添加到请求中
-    // 直接使用 datetime-local 的值，不再转换为 ISO 格式
     if (form.create_time) {
       data.create_time = form.create_time
     }
@@ -317,7 +291,7 @@ const handleSubmit = async () => {
       await articleApi.create(data)
     }
 
-    showMessage('保存成功', 'success')
+    showMessage('保存成功')
     setTimeout(() => {
       router.push('/admin/articles')
     }, 1000)
@@ -329,14 +303,19 @@ const handleSubmit = async () => {
   }
 }
 
-onMounted(() => {
-  loadCategories()
-  loadTags()
-  loadArticle()
+onMounted(async () => {
+  await Promise.all([loadCategories(), loadTags(), loadArticle()])
+  syncPreviewDecorations()
+})
+
+watch(() => form.content, () => {
+  syncPreviewDecorations()
 })
 </script>
 
 <style lang="scss" scoped>
+@use '../../styles/markdown-content.scss';
+
 .editor-page {
   min-height: 100vh;
   background: var(--color-bg-primary);
@@ -479,9 +458,13 @@ onMounted(() => {
 
 .meta-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -519,7 +502,6 @@ onMounted(() => {
   cursor: pointer;
 }
 
-// 标签选择器
 .tags-selector {
   display: flex;
   flex-wrap: wrap;
@@ -553,7 +535,6 @@ onMounted(() => {
   color: var(--color-text-tertiary);
 }
 
-// 编辑器容器
 .editor-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -609,68 +590,12 @@ onMounted(() => {
   padding: var(--spacing-md);
   overflow-y: auto;
 
-  :deep(h1), :deep(h2), :deep(h3), :deep(h4) {
-    margin-top: var(--spacing-md);
-    margin-bottom: var(--spacing-sm);
-    color: var(--color-text-primary);
-  }
-
-  :deep(p) {
-    margin-bottom: var(--spacing-sm);
-    color: var(--color-text-primary);
-    line-height: 1.7;
-  }
-
-  :deep(code) {
-    padding: 2px 6px;
-    background: var(--color-bg-tertiary);
-    border-radius: var(--radius-sm);
-    font-family: monospace;
-    font-size: 13px;
-  }
-
-  :deep(pre) {
-    padding: var(--spacing-md);
-    background: var(--color-bg-tertiary);
-    border-radius: var(--radius-md);
-    overflow-x: auto;
-
-    code {
-      padding: 0;
-      background: none;
-    }
-  }
-
-  :deep(blockquote) {
-    margin: var(--spacing-md) 0;
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-left: 4px solid var(--color-accent);
-    background: var(--color-bg-tertiary);
-    color: var(--color-text-secondary);
-  }
-
-  :deep(img) {
-    max-width: 100%;
-    border-radius: var(--radius-md);
-  }
-
-  :deep(ul), :deep(ol) {
-    padding-left: var(--spacing-lg);
-    margin: var(--spacing-sm) 0;
-  }
-
-  :deep(li) {
-    margin: var(--spacing-xs) 0;
-    color: var(--color-text-primary);
-  }
-
   .empty-preview {
     color: var(--color-text-tertiary);
     font-style: italic;
   }
 }
 
-// 消息提示弹窗
 .message-toast {
   position: fixed;
   top: 24px;
