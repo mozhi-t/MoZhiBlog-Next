@@ -711,7 +711,7 @@ onUnmounted(() => {
   .search-input {
     position: absolute;
     left: -10px;
-    width: 140px;
+    width: 122px;
     height: 100%;
     padding: 0 16px 0 36px;
     background: transparent;
@@ -730,7 +730,7 @@ onUnmounted(() => {
   }
 
   &.search-hovered {
-    width: 200px;
+    width: 170px;
     border-radius: 30px;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -755,7 +755,7 @@ onUnmounted(() => {
     top: 10px;
 
     &.search-hovered {
-      width: 200px;
+      width: 170px;
     }
   }
 }
