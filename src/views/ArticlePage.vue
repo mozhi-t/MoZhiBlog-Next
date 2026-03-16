@@ -2,13 +2,23 @@
   <div class="article-page" v-if="!loading && !notFound">
     <!-- Article Header -->
     <header class="article-header">
-      <div class="header-meta">
-        <router-link v-if="article.category" :to="`/category/${article.categorySlug}`" class="category-tag">
-          {{ article.category }}
-        </router-link>
-        <div class="header-badges" v-if="article.isTop || article.needPassword">
-          <span v-if="article.isTop" class="header-badge top">置顶文章</span>
-          <span v-if="article.needPassword" class="header-badge password">密码保护</span>
+      <div class="header-meta-row">
+        <div class="header-meta-left">
+          <button type="button" class="back-button" @click="goBack">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6"></path>
+            </svg>
+            <span>返回</span>
+          </button>
+        </div>
+        <div class="header-meta">
+          <router-link v-if="article.category" :to="`/category/${article.categorySlug}`" class="category-tag">
+            {{ article.category }}
+          </router-link>
+          <div class="header-badges" v-if="article.isTop || article.needPassword">
+            <span v-if="article.isTop" class="header-badge top">置顶文章</span>
+            <span v-if="article.needPassword" class="header-badge password">密码保护</span>
+          </div>
         </div>
       </div>
       <h1 class="article-title">{{ article.title }}</h1>
@@ -143,7 +153,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Marked } from 'marked'
 import { markedHighlight } from 'marked-highlight'
 import hljs from 'highlight.js'
@@ -181,7 +191,28 @@ const renderer = {
 marked.use({ renderer })
 
 const route = useRoute()
+const router = useRouter()
 const readingStore = useReadingStore()
+
+const goBack = () => {
+  const hasRouterBack = typeof window !== 'undefined' && window.history.state?.back
+  let hasSameOriginReferrer = false
+
+  if (typeof document !== 'undefined' && document.referrer) {
+    try {
+      hasSameOriginReferrer = new URL(document.referrer).origin === window.location.origin
+    } catch {
+      hasSameOriginReferrer = false
+    }
+  }
+
+  if (hasRouterBack || hasSameOriginReferrer) {
+    router.back()
+    return
+  }
+
+  router.push('/')
+}
 
 // Font size
 const fontSize = computed(() => readingStore.currentFontSize)
@@ -664,13 +695,60 @@ const handleScroll = () => {
   border-bottom: 1px solid var(--color-divider);
 }
 
+.header-meta-row {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  min-height: 40px;
+}
+
+.header-meta-left {
+  position: absolute;
+  left: 96px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  transition: all var(--transition-base);
+
+  svg {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--transition-base);
+  }
+
+  &:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: var(--color-accent-light);
+
+    svg {
+      transform: translateX(-2px);
+    }
+  }
+}
+
 .header-meta {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-sm);
   flex-wrap: wrap;
-  margin-bottom: var(--spacing-md);
 }
 
 .header-badges {
@@ -711,6 +789,20 @@ const handleScroll = () => {
   &:hover {
     background: var(--color-accent);
     color: white;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-meta-row {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    min-height: auto;
+  }
+
+  .header-meta-left {
+    position: static;
+    transform: none;
+    align-self: flex-start;
   }
 }
 
