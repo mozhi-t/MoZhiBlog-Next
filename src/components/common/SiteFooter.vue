@@ -16,7 +16,7 @@
           >
             {{ link.label }}
           </a>
-          <span v-if="index < SITE_CONFIG.footer.links.length - 1" class="divider">路</span>
+          <span v-if="index < SITE_CONFIG.footer.links.length - 1" class="divider">·</span>
         </template>
       </div>
     </div>
@@ -83,9 +83,9 @@ onUnmounted(() => {
 
 .copyright,
 .site-time {
+  margin-bottom: var(--spacing-sm);
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
-  margin-bottom: var(--spacing-sm);
 }
 
 .footer-links {

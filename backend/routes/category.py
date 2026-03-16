@@ -1,33 +1,40 @@
 """
-Category Routes - 分类接口
+Category routes.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from auth import get_current_admin
+from cache import cache
+from logger import logger
 from models import Category, get_db
 from schemas import CategoryCreate, CategoryUpdate
-from auth import get_current_admin
-from logger import logger
 
-router = APIRouter(prefix="/api/categories", tags=["分类"])
+router = APIRouter(prefix="/api/categories", tags=["categories"])
+
+CATEGORIES_CACHE_KEY = "categories:list"
+
+
+def invalidate_category_cache():
+    cache.delete(CATEGORIES_CACHE_KEY)
 
 
 @router.get("")
 def get_categories(db: Session = Depends(get_db)):
-    """获取所有分类列表（公开）"""
-    categories = db.query(Category).order_by(Category.create_time.desc()).all()
-    return {
-        "code": 200,
-        "msg": "success",
-        "data": [{
-            "id": c.id,
-            "name": c.name,
-            "create_time": c.create_time.isoformat() if c.create_time else None
-        } for c in categories]
-    }
+    def load_categories():
+        categories = db.query(Category).order_by(Category.create_time.desc()).all()
+        return {
+            "code": 200,
+            "msg": "success",
+            "data": [{
+                "id": c.id,
+                "name": c.name,
+                "create_time": c.create_time.isoformat() if c.create_time else None
+            } for c in categories]
+        }
 
+    return cache.get_or_set(CATEGORIES_CACHE_KEY, load_categories)
 
-# ==================== 管理员接口 ====================
 
 @router.post("")
 def create_category(
@@ -35,20 +42,19 @@ def create_category(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    """新增分类（需管理员鉴权）"""
-
     existing = db.query(Category).filter(Category.name == category_data.name).first()
     if existing:
-        logger.warning(f"分类名称已存在 - name: {category_data.name}")
+        logger.warning(f"category name already exists - name: {category_data.name}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="分类名称已存在"
+            detail="Category name already exists.",
         )
 
     category = Category(name=category_data.name)
     db.add(category)
     db.commit()
     db.refresh(category)
+    invalidate_category_cache()
 
     return {
         "code": 200,
@@ -68,31 +74,29 @@ def update_category(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    """
-    编辑分类（需管理员鉴权）
-    """
-    logger.info(f"更新分类 - category_id: {category_id}, author: {admin.username}")
+    logger.info(f"category updated - category_id: {category_id}, author: {admin.username}")
 
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
-        logger.warning(f"分类不存在 - category_id: {category_id}")
+        logger.warning(f"category not found - category_id: {category_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="分类不存在"
+            detail="Category does not exist.",
         )
 
     if category_data.name and category_data.name != category.name:
         existing = db.query(Category).filter(Category.name == category_data.name).first()
         if existing:
-            logger.warning(f"分类名称已存在 - name: {category_data.name}")
+            logger.warning(f"category name already exists - name: {category_data.name}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="分类名称已存在"
+                detail="Category name already exists.",
             )
         category.name = category_data.name
 
     db.commit()
     db.refresh(category)
+    invalidate_category_cache()
 
     return {
         "code": 200,
@@ -111,27 +115,25 @@ def delete_category(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
-    """
-    删除分类（需管理员鉴权）
-    """
-    logger.info(f"删除分类 - category_id: {category_id}, author: {admin.username}")
+    logger.info(f"category deleted - category_id: {category_id}, author: {admin.username}")
 
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
-        logger.warning(f"分类不存在 - category_id: {category_id}")
+        logger.warning(f"category not found - category_id: {category_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="分类不存在"
+            detail="Category does not exist.",
         )
 
     if category.articles:
-        logger.warning(f"该分类下有文章，无法删除 - category_id: {category_id}")
+        logger.warning(f"category has articles and cannot be deleted - category_id: {category_id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="该分类下有文章，无法删除"
+            detail="Category has articles and cannot be deleted.",
         )
 
     db.delete(category)
     db.commit()
+    invalidate_category_cache()
 
-    return {"code": 200, "msg": "删除成功"}
+    return {"code": 200, "msg": "Delete successful."}

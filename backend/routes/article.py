@@ -1,12 +1,12 @@
 """
-Article Routes - 文章接口
+Article routes.
 """
 from datetime import timedelta
 from time import time
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session
 
 from auth import (
@@ -17,11 +17,12 @@ from auth import (
     get_password_hash,
     verify_password,
 )
+from cache import cache
 from logger import logger
 from models import Article, Category, Tag, get_db
 from schemas import ArticleCreate, ArticlePasswordVerifyRequest, ArticleUpdate
 
-router = APIRouter(prefix="/api/articles", tags=["文章"])
+router = APIRouter(prefix="/api/articles", tags=["articles"])
 
 ARTICLE_TYPE_NORMAL = 0
 ARTICLE_TYPE_TOP = 1
@@ -33,6 +34,30 @@ PASSWORD_VERIFY_LIMIT = 10
 PASSWORD_VERIFY_WINDOW_SECONDS = 300
 
 password_verify_records: dict[str, list[float]] = {}
+
+
+def build_articles_cache_key(
+    page: int,
+    size: int,
+    category_id: Optional[int],
+    tag_id: Optional[int],
+    keyword: Optional[str],
+    article_type: Optional[int],
+    merge_top: bool,
+) -> str:
+    keyword_part = (keyword or "").strip()
+    return (
+        "articles:list:"
+        f"page={page}:size={size}:category_id={category_id}:tag_id={tag_id}:"
+        f"keyword={keyword_part}:type={article_type}:merge_top={merge_top}"
+    )
+
+
+def invalidate_article_cache():
+    cache.delete_prefix("articles:list:")
+    cache.delete_prefix("articles:hot:")
+    cache.delete("categories:list")
+    cache.delete("tags:list")
 
 
 def get_tags_from_ids(tags_str: Optional[str], db: Session):
@@ -61,7 +86,7 @@ def check_password_rate_limit(ip: str):
     if len(recent_attempts) >= PASSWORD_VERIFY_LIMIT:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="密码验证请求过于频繁，请稍后再试"
+            detail="Password verification requests are too frequent.",
         )
 
     recent_attempts.append(now)
@@ -140,7 +165,7 @@ def validate_category(category_id: Optional[int], db: Session):
     if not category:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="分类不存在",
+            detail="Category does not exist.",
         )
 
 
@@ -156,7 +181,7 @@ def validate_tags(tags: Optional[str], db: Session):
     if len(existing_tags) != len(tag_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="部分标签不存在",
+            detail="Some tags do not exist.",
         )
 
 
@@ -166,11 +191,27 @@ def get_articles(
     size: int = Query(10, ge=1, le=100),
     category_id: Optional[int] = None,
     tag_id: Optional[int] = None,
-    type: Optional[int] = Query(None, description="文章属性筛选: 0-普通, 1-置顶, 2-密码访问"),
-    merge_top: bool = Query(False, description="是否将所有置顶文章聚合到第一页顶部"),
+    keyword: Optional[str] = Query(None, min_length=1, description="keyword"),
+    type: Optional[int] = Query(None, description="article type"),
+    merge_top: bool = Query(False, description="merge top articles into page 1"),
     db: Session = Depends(get_db),
 ):
+    cache_key = build_articles_cache_key(page, size, category_id, tag_id, keyword, type, merge_top)
+    cached_response = cache.get(cache_key)
+    if cached_response is not None:
+        return cached_response
+
     query = db.query(Article)
+
+    if keyword:
+        like_keyword = f"%{keyword.strip()}%"
+        query = query.filter(
+            or_(
+                Article.title.ilike(like_keyword),
+                Article.summary.ilike(like_keyword),
+                Article.content.ilike(like_keyword),
+            )
+        )
 
     if category_id:
         query = query.filter(Article.category_id == category_id)
@@ -206,7 +247,7 @@ def get_articles(
             .limit(size) \
             .all()
 
-    return {
+    response = {
         "code": 200,
         "msg": "success",
         "data": {
@@ -217,12 +258,19 @@ def get_articles(
             "pages": pages,
         },
     }
+    cache.set(cache_key, response)
+    return response
 
 
 @router.get("/hot")
 def get_hot_articles(limit: int = Query(10, ge=1, le=50), db: Session = Depends(get_db)):
+    cache_key = f"articles:hot:limit={limit}"
+    cached_response = cache.get(cache_key)
+    if cached_response is not None:
+        return cached_response
+
     articles = db.query(Article).order_by(desc(Article.read_count)).limit(limit).all()
-    return {
+    response = {
         "code": 200,
         "msg": "success",
         "data": [
@@ -237,6 +285,8 @@ def get_hot_articles(limit: int = Query(10, ge=1, le=50), db: Session = Depends(
             for article in articles
         ],
     }
+    cache.set(cache_key, response)
+    return response
 
 
 @router.get("/{article_id}/reference")
@@ -245,7 +295,7 @@ def get_article_reference(article_id: int, db: Session = Depends(get_db)):
     if not article:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="文章不存在",
+            detail="Article does not exist.",
         )
 
     category = None
@@ -277,10 +327,10 @@ def get_article(
 ):
     article = db.query(Article).filter(Article.id == article_id).first()
     if not article:
-        logger.warning(f"文章不存在 - article_id: {article_id}")
+        logger.warning(f"article not found - article_id: {article_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="文章不存在",
+            detail="Article does not exist.",
         )
 
     unlocked = admin is not None or article.type != ARTICLE_TYPE_PASSWORD or has_article_access(request, article_id)
@@ -288,6 +338,7 @@ def get_article(
         article.read_count += 1
         db.commit()
         db.refresh(article)
+        cache.delete_prefix("articles:hot:")
 
     return {
         "code": 200,
@@ -313,7 +364,7 @@ def verify_article_password_access(
     if not article:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="文章不存在",
+            detail="Article does not exist.",
         )
 
     if article.type != ARTICLE_TYPE_PASSWORD:
@@ -350,7 +401,7 @@ def create_article(
     if article_data.type == ARTICLE_TYPE_PASSWORD and not article_data.access_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="密码访问文章必须设置访问密码",
+            detail="Password-protected articles must set an access password.",
         )
 
     article = Article(
@@ -370,8 +421,9 @@ def create_article(
     db.add(article)
     db.commit()
     db.refresh(article)
+    invalidate_article_cache()
 
-    logger.info(f"创建文章 - article_id: {article.id}, author: {admin.username}")
+    logger.info(f"article created - article_id: {article.id}, author: {admin.username}")
     return {
         "code": 200,
         "msg": "success",
@@ -386,13 +438,13 @@ def update_article(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin),
 ):
-    logger.info(f"更新文章 - article_id: {article_id}, author: {admin.username}")
+    logger.info(f"article updated - article_id: {article_id}, author: {admin.username}")
     article = db.query(Article).filter(Article.id == article_id).first()
     if not article:
-        logger.warning(f"文章不存在 - article_id: {article_id}")
+        logger.warning(f"article not found - article_id: {article_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="文章不存在",
+            detail="Article does not exist.",
         )
 
     update_data = article_data.model_dump(exclude_unset=True)
@@ -408,7 +460,7 @@ def update_article(
         elif not article.access_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="密码访问文章必须设置访问密码",
+                detail="Password-protected articles must set an access password.",
             )
     else:
         update_data["access_password"] = None
@@ -418,6 +470,7 @@ def update_article(
 
     db.commit()
     db.refresh(article)
+    invalidate_article_cache()
 
     return {
         "code": 200,
@@ -432,15 +485,16 @@ def delete_article(
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin),
 ):
-    logger.info(f"删除文章 - article_id: {article_id}, author: {admin.username}")
+    logger.info(f"article deleted - article_id: {article_id}, author: {admin.username}")
     article = db.query(Article).filter(Article.id == article_id).first()
     if not article:
-        logger.warning(f"文章不存在 - article_id: {article_id}")
+        logger.warning(f"article not found - article_id: {article_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="文章不存在",
+            detail="Article does not exist.",
         )
 
     db.delete(article)
     db.commit()
-    return {"code": 200, "msg": "删除成功"}
+    invalidate_article_cache()
+    return {"code": 200, "msg": "Delete successful."}

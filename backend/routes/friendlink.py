@@ -1,43 +1,54 @@
 """
-FriendLink Routes - 友链接口
+FriendLink Routes - 鍙嬮摼鎺ュ彛
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import desc
+from sqlalchemy.orm import Session
 
+from auth import get_current_admin
+from cache import cache
 from models import FriendLink, get_db
 from schemas import FriendLinkCreate, FriendLinkUpdate
-from auth import get_current_admin
 
-router = APIRouter(prefix="/api/friend_links", tags=["友链"])
+router = APIRouter(prefix="/api/friend_links", tags=["鍙嬮摼"])
+
+FRIEND_LINKS_CACHE_KEY = "friend_links:list"
+
+
+def invalidate_friend_link_cache():
+    cache.delete(FRIEND_LINKS_CACHE_KEY)
 
 
 @router.get("")
 def get_friend_links(db: Session = Depends(get_db)):
     """
-    获取所有展示的友链列表（公开），按权重和创建时间排序
+    鑾峰彇鎵€鏈夊睍绀虹殑鍙嬮摼鍒楄〃锛堝叕寮€锛夛紝鎸夋潈閲嶅拰鍒涘缓鏃堕棿鎺掑簭
     """
-    links = db.query(FriendLink).filter(
-        FriendLink.is_show == 1
-    ).order_by(FriendLink.weight.asc(), FriendLink.create_time.desc()).all()
 
-    return {
-        "code": 200,
-        "msg": "success",
-        "data": [{
-            "id": l.id,
-            "username": l.username,
-            "signature": l.signature,
-            "icon_url": l.icon_url,
-            "link_url": l.link_url,
-            "create_time": l.create_time.isoformat() if l.create_time else None,
-            "is_show": l.is_show,
-            "weight": l.weight
-        } for l in links]
-    }
+    def load_friend_links():
+        links = db.query(FriendLink).filter(
+            FriendLink.is_show == 1
+        ).order_by(FriendLink.weight.asc(), FriendLink.create_time.desc()).all()
+
+        return {
+            "code": 200,
+            "msg": "success",
+            "data": [{
+                "id": l.id,
+                "username": l.username,
+                "signature": l.signature,
+                "icon_url": l.icon_url,
+                "link_url": l.link_url,
+                "create_time": l.create_time.isoformat() if l.create_time else None,
+                "is_show": l.is_show,
+                "weight": l.weight
+            } for l in links]
+        }
+
+    return cache.get_or_set(FRIEND_LINKS_CACHE_KEY, load_friend_links)
 
 
-# ==================== 管理员接口 ====================
+# ==================== 绠＄悊鍛樻帴鍙?====================
 
 @router.post("")
 def create_friend_link(
@@ -46,7 +57,7 @@ def create_friend_link(
     admin=Depends(get_current_admin)
 ):
     """
-    新增友链（需管理员鉴权）
+    鏂板鍙嬮摼锛堥渶绠＄悊鍛橀壌鏉冿級
     """
     link = FriendLink(
         username=link_data.username,
@@ -59,6 +70,7 @@ def create_friend_link(
     db.add(link)
     db.commit()
     db.refresh(link)
+    invalidate_friend_link_cache()
 
     return {
         "code": 200,
@@ -80,13 +92,13 @@ def create_friend_link(
 def get_all_friend_links(
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
-    is_show: int = Query(None, description="展示状态筛选"),
-    weight: int = Query(None, description="权重筛选: 0-挚友, 1-朋友, 2-来客"),
+    is_show: int = Query(None, description="show status filter"),
+    weight: int = Query(None, description="weight filter"),
     db: Session = Depends(get_db),
     admin=Depends(get_current_admin)
 ):
     """
-    获取所有友链（需管理员鉴权）
+    鑾峰彇鎵€鏈夊弸閾撅紙闇€绠＄悊鍛橀壌鏉冿級
     """
     query = db.query(FriendLink)
 
@@ -133,13 +145,13 @@ def update_friend_link(
     admin=Depends(get_current_admin)
 ):
     """
-    编辑友链（需管理员鉴权）
+    缂栬緫鍙嬮摼锛堥渶绠＄悊鍛橀壌鏉冿級
     """
     link = db.query(FriendLink).filter(FriendLink.id == link_id).first()
     if not link:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="友链不存在"
+            detail="鍙嬮摼涓嶅瓨鍦?",
         )
 
     update_data = link_data.model_dump(exclude_unset=True)
@@ -148,6 +160,7 @@ def update_friend_link(
 
     db.commit()
     db.refresh(link)
+    invalidate_friend_link_cache()
 
     return {
         "code": 200,
@@ -172,16 +185,17 @@ def delete_friend_link(
     admin=Depends(get_current_admin)
 ):
     """
-    删除友链（需管理员鉴权）
+    鍒犻櫎鍙嬮摼锛堥渶绠＄悊鍛橀壌鏉冿級
     """
     link = db.query(FriendLink).filter(FriendLink.id == link_id).first()
     if not link:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="友链不存在"
+            detail="鍙嬮摼涓嶅瓨鍦?",
         )
 
     db.delete(link)
     db.commit()
+    invalidate_friend_link_cache()
 
-    return {"code": 200, "msg": "删除成功"}
+    return {"code": 200, "msg": "鍒犻櫎鎴愬姛"}

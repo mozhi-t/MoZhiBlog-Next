@@ -25,6 +25,7 @@ class Config:
 
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174').split(',')
     SITE_URL = os.getenv('SITE_URL', 'https://blog.mozhi.top').rstrip('/')
+    API_PORT = int(os.getenv('API_PORT', 8008))
 
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
     LOG_DIR = os.getenv('LOG_DIR', None)

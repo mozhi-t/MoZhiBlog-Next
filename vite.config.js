@@ -18,11 +18,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/sitemap.xml': {
-        target: 'http://localhost:8001',
+        target: 'http://localhost:8008',
         changeOrigin: true
       },
       '/api': {
-        target: 'http://localhost:8001',
+        target: 'http://localhost:8008',
         changeOrigin: true
       }
     }

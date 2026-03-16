@@ -15,7 +15,7 @@ export const SITE_CONFIG = {
     name: 'MoZhi',
     avatar: '/favicon.ico',
     bio: '远方很远，步履不停，未来可期',
-    intro: 'Hi~欢迎光临 MoZhi 的个人博客，这里存放有技术分析、学习笔记、生活感悟等内容，还有一些好玩的效果，希望你可以在这里找到对你有用的知识和感悟。',
+    intro: 'Hi~ 欢迎光临 MoZhi 的个人博客，这里存放技术分析、学习笔记、生活感悟和一些有趣的效果，希望你能在这里找到有用的知识和灵感。',
     aboutBio: '前端开发者 / 设计爱好者 / 终身学习者',
     email: 'mozhi.it@qq.com',
     socialLinks: {
@@ -44,7 +44,7 @@ export const SITE_CONFIG = {
     path: ''
   },
   friendLink: {
-    intro: '如果你想交换友链，可以在下方评论发出你的友链信息或用邮箱联系我，我看到之后会第一时间添加。',
+    intro: '如果你想交换友链，可以在下方评论区留下你的友链信息，或者通过邮箱联系我，我看到后会尽快添加。',
     siteName: 'MoZhi Blog',
     siteUrl,
     avatar: 'https://mozhi.s3.bitiful.net/cropped-tou.jpg',
@@ -56,7 +56,7 @@ export const SITE_CONFIG = {
     links: [
       { label: 'GitHub', href: 'https://github.com/mozhi-it', external: true },
       { label: 'RSS', href: '/rss.xml', external: false },
-      { label: '林槐夏', href: 'https://www.lyvps.net', external: true }
+      { label: '林柚云', href: 'https://www.lyvps.net', external: true }
     ]
   }
 }

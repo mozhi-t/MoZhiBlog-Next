@@ -1,32 +1,44 @@
 """
-Tag Routes - 标签接口
+Tag Routes - 鏍囩鎺ュ彛
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import desc
+from sqlalchemy.orm import Session
 
-from models import Tag, Article, get_db
-from schemas import TagCreate, TagUpdate
 from auth import get_current_admin
+from cache import cache
+from models import Article, Tag, get_db
+from schemas import TagCreate, TagUpdate
 
-router = APIRouter(prefix="/api/tags", tags=["标签"])
+router = APIRouter(prefix="/api/tags", tags=["鏍囩"])
+
+TAGS_CACHE_KEY = "tags:list"
+
+
+def invalidate_tag_cache():
+    cache.delete(TAGS_CACHE_KEY)
+    cache.delete_prefix("articles:list:")
 
 
 @router.get("")
 def get_tags(db: Session = Depends(get_db)):
     """
-    获取所有标签列表（公开）
+    鑾峰彇鎵€鏈夋爣绛惧垪琛紙鍏紑锛?
     """
-    tags = db.query(Tag).order_by(desc(Tag.create_time)).all()
-    return {
-        "code": 200,
-        "msg": "success",
-        "data": [{
-            "id": t.id,
-            "name": t.name,
-            "create_time": t.create_time.isoformat() if t.create_time else None
-        } for t in tags]
-    }
+
+    def load_tags():
+        tags = db.query(Tag).order_by(desc(Tag.create_time)).all()
+        return {
+            "code": 200,
+            "msg": "success",
+            "data": [{
+                "id": t.id,
+                "name": t.name,
+                "create_time": t.create_time.isoformat() if t.create_time else None
+            } for t in tags]
+        }
+
+    return cache.get_or_set(TAGS_CACHE_KEY, load_tags)
 
 
 @router.get("/all")
@@ -37,7 +49,7 @@ def get_all_tags(
     admin=Depends(get_current_admin)
 ):
     """
-    获取所有标签列表（需管理员鉴权）
+    鑾峰彇鎵€鏈夋爣绛惧垪琛紙闇€绠＄悊鍛橀壌鏉冿級
     """
     query = db.query(Tag)
     total = query.count()
@@ -47,7 +59,6 @@ def get_all_tags(
         .limit(size)\
         .all()
 
-    # 获取每个标签的文章数量
     items = []
     for tag in tags:
         article_count = db.query(Article).filter(Article.tag_id == tag.id).count()
@@ -71,7 +82,7 @@ def get_all_tags(
     }
 
 
-# ==================== 管理员接口 ====================
+# ==================== 绠＄悊鍛樻帴鍙?====================
 
 @router.post("")
 def create_tag(
@@ -80,19 +91,20 @@ def create_tag(
     admin=Depends(get_current_admin)
 ):
     """
-    新增标签（需管理员鉴权）
+    鏂板鏍囩锛堥渶绠＄悊鍛橀壌鏉冿級
     """
     existing = db.query(Tag).filter(Tag.name == tag_data.name).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="标签名称已存在"
+            detail="鏍囩鍚嶇О宸插瓨鍦?",
         )
 
     tag = Tag(name=tag_data.name)
     db.add(tag)
     db.commit()
     db.refresh(tag)
+    invalidate_tag_cache()
 
     return {
         "code": 200,
@@ -113,13 +125,13 @@ def update_tag(
     admin=Depends(get_current_admin)
 ):
     """
-    编辑标签（需管理员鉴权）
+    缂栬緫鏍囩锛堥渶绠＄悊鍛橀壌鏉冿級
     """
     tag = db.query(Tag).filter(Tag.id == tag_id).first()
     if not tag:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="标签不存在"
+            detail="鏍囩涓嶅瓨鍦?",
         )
 
     if tag_data.name and tag_data.name != tag.name:
@@ -127,12 +139,13 @@ def update_tag(
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="标签名称已存在"
+                detail="鏍囩鍚嶇О宸插瓨鍦?",
             )
         tag.name = tag_data.name
 
     db.commit()
     db.refresh(tag)
+    invalidate_tag_cache()
 
     return {
         "code": 200,
@@ -152,16 +165,17 @@ def delete_tag(
     admin=Depends(get_current_admin)
 ):
     """
-    删除标签（需管理员鉴权）
+    鍒犻櫎鏍囩锛堥渶绠＄悊鍛橀壌鏉冿級
     """
     tag = db.query(Tag).filter(Tag.id == tag_id).first()
     if not tag:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="标签不存在"
+            detail="鏍囩涓嶅瓨鍦?",
         )
 
     db.delete(tag)
     db.commit()
+    invalidate_tag_cache()
 
-    return {"code": 200, "msg": "删除成功"}
+    return {"code": 200, "msg": "鍒犻櫎鎴愬姛"}

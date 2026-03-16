@@ -6,34 +6,38 @@
     @click="goToArticle"
   >
     <div class="card-content">
-      <!-- 分类小标签 -->
-      <div class="card-category" @click.stop="goToCategory" v-if="article.category">
+      <div v-if="article.category" class="card-category" @click.stop="goToCategory">
         <svg class="category-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
         <span>{{ article.category }}</span>
       </div>
 
-      <!-- 文章标题 -->
       <div class="card-title-row">
-        <h3 class="card-title">{{ article.title }}</h3>
-        <div class="card-badges" v-if="article.is_top || article.need_password">
+        <h3 class="card-title" v-html="highlightedTitle"></h3>
+        <div v-if="article.is_top || article.need_password" class="card-badges">
           <span v-if="article.is_top" class="badge top">置顶</span>
           <span v-if="article.need_password" class="badge password">加密</span>
         </div>
       </div>
 
-      <!-- 简短摘要 -->
-      <p class="card-excerpt">{{ article.excerpt || (article.need_password ? '这是一篇密码保护文章，输入正确密码后可查看完整内容。' : '') }}</p>
+      <p class="card-excerpt" v-html="highlightedExcerpt"></p>
 
-      <!-- 底部：标签云 + 日期 + 阅读数 -->
       <div class="card-footer">
-        <div class="tags" v-if="article.tag_list && article.tag_list.length > 0">
-          <span class="tag" v-for="tag in article.tag_list" :key="tag.id" @click.stop="goToTag(tag.id)">#{{ tag.name }}</span>
+        <div v-if="article.tag_list && article.tag_list.length > 0" class="tags">
+          <span
+            v-for="tag in article.tag_list"
+            :key="tag.id"
+            class="tag"
+            @click.stop="goToTag(tag.id)"
+          >
+            #{{ tag.name }}
+          </span>
         </div>
-        <div class="tags" v-else-if="article.tag">
+        <div v-else-if="article.tag" class="tags">
           <span class="tag" @click.stop="goToTag(article.tag.id)">#{{ article.tag.name }}</span>
         </div>
+
         <div class="right-info">
           <div class="dates">
             <span class="date-item">
@@ -45,7 +49,7 @@
               </svg>
               {{ formatDate(article.create_time, true) }}
             </span>
-            <span class="date-item" v-if="article.update_time && article.update_time !== article.create_time">
+            <span v-if="article.update_time && article.update_time !== article.create_time" class="date-item">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -53,6 +57,7 @@
               {{ formatDate(article.update_time, true) }}
             </span>
           </div>
+
           <div class="stats">
             <span class="stat-item">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -77,15 +82,28 @@ const props = defineProps({
   article: {
     type: Object,
     required: true
+  },
+  highlightKeyword: {
+    type: String,
+    default: ''
   }
 })
 
 const router = useRouter()
 const { targetRef, isVisible } = useIntersectionObserver()
 
-// 格式化日期
+const escapeHtml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+
+const escapeRegExp = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 const formatDate = (date, includeTime = false) => {
   if (!date) return ''
+
   if (includeTime) {
     return new Date(date).toLocaleString('zh-CN', {
       year: 'numeric',
@@ -95,12 +113,34 @@ const formatDate = (date, includeTime = false) => {
       minute: '2-digit'
     })
   }
+
   return new Date(date).toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
   })
 }
+
+const highlightText = (value = '') => {
+  const keyword = props.highlightKeyword.trim()
+  const safeText = escapeHtml(value)
+
+  if (!keyword) {
+    return safeText
+  }
+
+  return safeText.replace(
+    new RegExp(`(${escapeRegExp(keyword)})`, 'gi'),
+    '<mark class="keyword-highlight">$1</mark>'
+  )
+}
+
+const defaultExcerpt = computed(() => (
+  props.article.excerpt || (props.article.need_password ? '这是一篇密码保护文章，输入正确密码后可查看完整内容。' : '')
+))
+
+const highlightedTitle = computed(() => highlightText(props.article.title || ''))
+const highlightedExcerpt = computed(() => highlightText(defaultExcerpt.value))
 
 const goToArticle = () => {
   router.push(`/article/${props.article.id}`)
@@ -118,9 +158,6 @@ const goToTag = (tagId) => {
 </script>
 
 <style lang="scss" scoped>
-/* ============================================
-   Article Card - 文章卡片
-   ============================================ */
 .article-card {
   position: relative;
   background: var(--color-bg-secondary);
@@ -155,7 +192,6 @@ const goToTag = (tagId) => {
   padding: var(--spacing-xl);
 }
 
-/* 分类小标签 */
 .card-category {
   display: inline-flex;
   align-items: center;
@@ -181,7 +217,6 @@ const goToTag = (tagId) => {
   height: 12px;
 }
 
-/* 文章标题 */
 .card-title {
   font-size: var(--font-size-xl);
   font-weight: 600;
@@ -225,7 +260,6 @@ const goToTag = (tagId) => {
   }
 }
 
-/* 简短摘要 */
 .card-excerpt {
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
@@ -237,7 +271,6 @@ const goToTag = (tagId) => {
   overflow: hidden;
 }
 
-/* 底部：标签云 + 日期 + 阅读数 */
 .card-footer {
   display: flex;
   align-items: center;
@@ -307,6 +340,17 @@ const goToTag = (tagId) => {
     height: 12px;
     opacity: 0.7;
   }
+}
+
+:deep(.keyword-highlight) {
+  padding: 0 4px;
+  color: inherit;
+  background: rgba(255, 196, 0, 0.26);
+  border-radius: 4px;
+}
+
+.card-excerpt :deep(.keyword-highlight) {
+  color: var(--color-text-primary);
 }
 
 @media (max-width: 768px) {
