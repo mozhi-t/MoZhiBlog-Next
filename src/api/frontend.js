@@ -18,6 +18,11 @@ const getArticleAccessToken = (articleId) => {
   return sessionStorage.getItem(`article_access_${articleId}`) || ''
 }
 
+const getMomentAccessToken = (momentId) => {
+  if (!momentId) return ''
+  return sessionStorage.getItem(`moment_access_${momentId}`) || ''
+}
+
 // 响应处理
 frontendApi.interceptors.response.use(
   response => response.data,
@@ -60,4 +65,15 @@ export const tagsApi = {
 // 友链
 export const friendLinksApi = {
   list: () => frontendApi.get('/friend_links')
+}
+
+// 说说
+export const momentsApi = {
+  list: (params) => frontendApi.get('/moments', { params }),
+  detail: (id) => frontendApi.get(`/moments/${id}`, {
+    headers: {
+      'X-Moment-Access-Token': getMomentAccessToken(id)
+    }
+  }),
+  verifyPassword: (id, password) => frontendApi.post(`/moments/${id}/verify-password`, { password })
 }

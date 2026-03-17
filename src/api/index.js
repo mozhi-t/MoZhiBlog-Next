@@ -97,6 +97,16 @@ export const friendLinkApi = {
   delete: (id) => api.delete(`/friend_links/${id}`)
 }
 
+// 说说
+export const momentApi = {
+  list: (params) => api.get('/moments', { params }),
+  detail: (id) => api.get(`/moments/${id}`),
+  verifyPassword: (id, password) => api.post(`/moments/${id}/verify-password`, { password }),
+  create: (data) => api.post('/moments', data),
+  update: (id, data) => api.put(`/moments/${id}`, data),
+  delete: (id) => api.delete(`/moments/${id}`)
+}
+
 // 标签
 export const tagApi = {
   list: () => api.get('/tags'),

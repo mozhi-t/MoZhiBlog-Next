@@ -171,6 +171,7 @@ const navItems = [
       { name: '标签', path: '/tag' }
     ]
   },
+  { name: '空间', path: '/space' },
   { name: '归档', path: '/archive' },
   { name: '友链', path: '/links' },
   { name: '留言', path: '/message' },

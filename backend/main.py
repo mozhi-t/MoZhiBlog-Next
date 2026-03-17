@@ -14,6 +14,7 @@ from routes import (
     article_router,
     category_router,
     friendlink_router,
+    moment_router,
     sitemap_router,
     tag_router,
 )
@@ -66,6 +67,7 @@ app.include_router(admin_router)
 app.include_router(article_router)
 app.include_router(category_router)
 app.include_router(friendlink_router)
+app.include_router(moment_router)
 app.include_router(tag_router)
 app.include_router(sitemap_router)
 

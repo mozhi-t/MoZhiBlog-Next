@@ -1,5 +1,5 @@
 /**
- * Admin Router - 后台管理路由
+ * Admin Router
  */
 import { createRouter, createWebHistory } from 'vue-router'
 
@@ -38,6 +38,12 @@ const routes = [
         name: 'ArticleEdit',
         component: () => import('../views/admin/ArticleEditor.vue'),
         meta: { title: '编辑文章', requiresAuth: true }
+      },
+      {
+        path: 'moments',
+        name: 'Moments',
+        component: () => import('../views/admin/Moments.vue'),
+        meta: { title: '说说管理', requiresAuth: true }
       },
       {
         path: 'categories',

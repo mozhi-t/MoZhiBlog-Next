@@ -222,6 +222,38 @@ class FriendLinkResponse(BaseModel):
         from_attributes = True
 
 
+# ==================== 说说 ====================
+
+class MomentCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+    access_password: Optional[str] = Field(None, max_length=100, description="留空表示公开可见")
+    create_time: Optional[datetime] = None
+    update_time: Optional[datetime] = None
+
+
+class MomentUpdate(BaseModel):
+    content: Optional[str] = None
+    access_password: Optional[str] = Field(None, max_length=100, description="空字符串表示清空密码")
+    create_time: Optional[datetime] = None
+    update_time: Optional[datetime] = None
+
+
+class MomentPasswordVerifyRequest(BaseModel):
+    password: str = Field(..., min_length=1, max_length=100)
+
+
+class MomentResponse(BaseModel):
+    id: int
+    content: Optional[str] = None
+    need_password: bool = False
+    has_password: bool = False
+    create_time: datetime
+    update_time: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ==================== 分页 ====================
 
 class PaginatedResponse(BaseModel):

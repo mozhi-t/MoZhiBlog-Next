@@ -38,6 +38,12 @@ const routes = [
     meta: { title: '归档' }
   },
   {
+    path: '/space',
+    name: 'Space',
+    component: () => import('../views/SpacePage.vue'),
+    meta: { title: '空间' }
+  },
+  {
     path: '/about',
     name: 'About',
     component: () => import('../views/AboutPage.vue'),
