@@ -109,7 +109,6 @@ class Moment(Base):
     content = Column(Text, nullable=False)
     access_password = Column(String(255), nullable=True)
     create_time = Column(DateTime, default=datetime.now)
-    update_time = Column(DateTime, default=datetime.now)
 
     def __repr__(self):
         return f"<Moment {self.id}>"

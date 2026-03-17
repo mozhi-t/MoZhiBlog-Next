@@ -16,7 +16,6 @@
         <div class="moment-head">
           <div>
             <div class="moment-time">{{ formatDateTime(moment.create_time) }}</div>
-            <div class="moment-subtime">更新于 {{ formatDateTime(moment.update_time) }}</div>
           </div>
           <span class="status-pill" :class="{ protected: moment.has_password }">
             {{ moment.has_password ? '已加密' : '公开' }}
@@ -78,7 +77,7 @@
               />
             </div>
 
-            <p class="field-tip">编辑已加密说说时，访问密码留空会清空密码。</p>
+            <p class="field-tip">留空则保留原密码，输入 @@ 则取消加密，输入其它内容则更新密码</p>
           </div>
 
           <div class="modal-footer">
@@ -131,7 +130,7 @@ const toDatetimeLocal = (dateStr) => {
 
 const normalizeDatetime = (value) => {
   if (!value) return null
-  return new Date(value).toISOString()
+  return value.length === 16 ? `${value}:00` : value
 }
 
 const loadMoments = async () => {
@@ -151,7 +150,7 @@ const resetForm = () => {
   editingId.value = null
   form.content = ''
   form.access_password = ''
-  form.create_time = toDatetimeLocal(new Date().toISOString())
+  form.create_time = toDatetimeLocal(new Date())
 }
 
 const closeModal = () => {
@@ -189,7 +188,6 @@ const handleSubmit = async () => {
     if (editingId.value) {
       await momentApi.update(editingId.value, payload)
     } else {
-      payload.update_time = payload.create_time
       await momentApi.create(payload)
     }
 
@@ -295,12 +293,6 @@ onMounted(() => {
 .moment-time {
   color: var(--color-text-primary);
   font-weight: 600;
-}
-
-.moment-subtime {
-  margin-top: 4px;
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-xs);
 }
 
 .status-pill {

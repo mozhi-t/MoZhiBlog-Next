@@ -43,6 +43,9 @@ export const SITE_CONFIG = {
     lang: 'zh-CN',
     path: ''
   },
+  article: {
+    tipQrCode: '/tip-qr-code.png'
+  },
   friendLink: {
     intro: '如果你想交换友链，可以在下方评论区留下你的友链信息，或者通过邮箱联系我，我看到后会尽快添加。',
     siteName: 'MoZhi Blog',

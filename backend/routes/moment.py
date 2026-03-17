@@ -93,7 +93,6 @@ def build_moment_payload(moment: Moment, *, unlocked: bool = False, admin_view: 
         "need_password": need_password,
         "has_password": bool(moment.access_password) if admin_view else False,
         "create_time": moment.create_time.isoformat() if moment.create_time else None,
-        "update_time": moment.update_time.isoformat() if moment.update_time else None,
     }
 
 
@@ -234,7 +233,6 @@ def create_moment(
         content=moment_data.content,
         access_password=get_password_hash(moment_data.access_password) if moment_data.access_password else None,
         create_time=moment_data.create_time,
-        update_time=moment_data.update_time,
     )
     db.add(moment)
     db.commit()
@@ -267,7 +265,12 @@ def update_moment(
 
     if "access_password" in update_data:
         raw_password = update_data["access_password"]
-        update_data["access_password"] = get_password_hash(raw_password) if raw_password else None
+        if raw_password == "@@":
+            update_data["access_password"] = None
+        elif raw_password:
+            update_data["access_password"] = get_password_hash(raw_password)
+        else:
+            update_data.pop("access_password")
 
     for key, value in update_data.items():
         setattr(moment, key, value)

@@ -60,9 +60,8 @@
                 </div>
 
                 <div class="timeline-card">
-                  <div class="timeline-card-head">
-                    <span class="timeline-badge">{{ formatMonth(moment.create_time) }}</span>
-                    <span v-if="moment.need_password" class="lock-badge">加密</span>
+                  <div v-if="moment.need_password" class="timeline-card-head">
+                    <span class="lock-badge">加密</span>
                   </div>
 
                   <div v-if="moment.need_password" class="locked-state">
@@ -73,10 +72,7 @@
                   <p v-else class="timeline-content">{{ moment.content }}</p>
 
                   <div class="timeline-footer">
-                    <span>创建于 {{ formatFull(moment.create_time) }}</span>
-                    <span v-if="moment.update_time && moment.update_time !== moment.create_time">
-                      更新于 {{ formatFull(moment.update_time) }}
-                    </span>
+                    <span>发布于 {{ formatFull(moment.create_time) }}</span>
                   </div>
                 </div>
               </article>
@@ -102,6 +98,13 @@
     </div>
 
     <div v-else class="empty-tip">还没有说说内容。</div>
+
+    <section class="comments-section">
+      <h2 class="comments-title">评论</h2>
+      <div id="twikoo-container">
+        <div id="tcomment"></div>
+      </div>
+    </section>
 
     <div v-if="showPasswordModal" class="modal-overlay" @click.self="closePasswordModal">
       <div class="password-modal">
@@ -136,6 +139,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { momentsApi } from '@/api/frontend'
+import { TWIKOO_CONFIG, TWIKOO_ENV_ID } from '@/config/twikoo'
 import { updateSeo } from '@/utils/seo'
 
 const PAGE_SIZE = 12
@@ -331,7 +335,7 @@ const triggerHeaderRipple = (monthKey, event) => {
     delete nextState[monthKey]
     rippleStates.value = nextState
     rippleTimers.delete(monthKey)
-  }, 560)
+  }, 790)
 
   rippleTimers.set(monthKey, timer)
 }
@@ -393,6 +397,39 @@ const submitPassword = async () => {
   } finally {
     unlocking.value = false
   }
+}
+
+const initTwikoo = () => {
+  nextTick(() => {
+    if (window.twikoo) {
+      initTwikooInstance()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = '/twikoo.min.js'
+    script.onload = () => {
+      initTwikooInstance()
+    }
+    script.onerror = () => {
+      console.error('Twikoo 脚本加载失败')
+    }
+    document.head.appendChild(script)
+  })
+}
+
+const initTwikooInstance = () => {
+  if (!window.twikoo) {
+    console.error('Twikoo 未正确加载')
+    return
+  }
+
+  window.twikoo.init({
+    envId: TWIKOO_ENV_ID,
+    el: TWIKOO_CONFIG.el,
+    path: '/space',
+    lang: TWIKOO_CONFIG.lang
+  })
 }
 
 const onAccordionBeforeEnter = (el) => {
@@ -469,6 +506,7 @@ onMounted(async () => {
   await loadInitialMoments()
   await nextTick()
   setupLoadMoreObserver()
+  initTwikoo()
 
   updateSeo({
     title: '空间',
@@ -586,7 +624,7 @@ onUnmounted(() => {
   transform: translate(-50%, -50%) scale(0);
   pointer-events: none;
   will-change: transform, opacity;
-  animation: headerRipple 860ms cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
+  animation: headerRipple 790ms cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
 }
 
 .month-header-main {
@@ -894,6 +932,21 @@ onUnmounted(() => {
   justify-content: center;
   padding: var(--spacing-3xl);
   color: var(--color-text-tertiary);
+}
+
+.comments-section {
+  max-width: 800px;
+  margin: var(--spacing-3xl) auto 0;
+}
+
+.comments-title {
+  margin: 0 0 var(--spacing-lg);
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
+}
+
+#twikoo-container {
+  min-height: 200px;
 }
 
 .loading-spinner {

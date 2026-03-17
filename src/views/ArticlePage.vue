@@ -126,6 +126,46 @@
       <div class="content-body markdown-content" ref="contentRef">
         <!-- 渲染Markdown内容 -->
         <div v-html="renderedContent"></div>
+        <section class="article-license-card">
+          <div class="license-main">
+            <span class="category-tag license-category">{{ article.category || '未分类' }}</span>
+            <p class="license-title">{{ article.title }}</p>
+            <div class="license-meta">
+              <span>作者：MoZhi</span>
+              <span>发布于 {{ formatDate(article.date, true) }}</span>
+              <span>更新于 {{ formatDate(article.updateTime || article.date, true) }}</span>
+              <a
+                class="license-link"
+                :href="CC_LICENSE_URL"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                许可协议 CC-BY-NC-SA 4.0 国际标准
+              </a>
+            </div>
+            <div class="license-summary">署名 — 非商业性使用 — 相同方式共享 4.0 国际版</div>
+          </div>
+          <div class="license-mark" aria-hidden="true">©</div>
+        </section>
+        <div
+          v-if="ARTICLE_TIP_QR_CODE"
+          ref="tipActionRef"
+          class="article-tip-action"
+          :class="{ active: isTipPopoverOpen }"
+        >
+          <div class="tip-popover">
+            <img class="tip-qr-image" :src="ARTICLE_TIP_QR_CODE" alt="赞赏收款码" />
+          </div>
+          <button
+            type="button"
+            class="tip-button"
+            :aria-expanded="isTipPopoverOpen"
+            @mousedown="handleTipMouseDown"
+            @click="toggleTipPopover"
+          >
+            <span>投币</span>
+          </button>
+        </div>
       </div>
     </article>
 
@@ -193,6 +233,8 @@ marked.use({ renderer })
 const route = useRoute()
 const router = useRouter()
 const readingStore = useReadingStore()
+const CC_LICENSE_URL = 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans'
+const ARTICLE_TIP_QR_CODE = SITE_CONFIG.article?.tipQrCode || ''
 
 const goBack = () => {
   const hasRouterBack = typeof window !== 'undefined' && window.history.state?.back
@@ -214,6 +256,25 @@ const goBack = () => {
   router.push('/')
 }
 
+const toggleTipPopover = () => {
+  if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    return
+  }
+  isTipPopoverOpen.value = !isTipPopoverOpen.value
+}
+
+const handleTipMouseDown = (event) => {
+  if (typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    event.preventDefault()
+  }
+}
+
+const handleGlobalPointerDown = (event) => {
+  if (!tipActionRef.value?.contains(event.target)) {
+    isTipPopoverOpen.value = false
+  }
+}
+
 // Font size
 const fontSize = computed(() => readingStore.currentFontSize)
 
@@ -222,6 +283,8 @@ const notFound = ref(false)
 const passwordInput = ref('')
 const passwordError = ref('')
 const verifyingPassword = ref(false)
+const tipActionRef = ref(null)
+const isTipPopoverOpen = ref(false)
 
 // 文章数据
 const article = ref({
@@ -597,6 +660,7 @@ onMounted(() => {
   loadArticle()
   calculateProgress()
   window.addEventListener('scroll', handleScroll, { passive: true })
+  document.addEventListener('pointerdown', handleGlobalPointerDown)
   // 渲染完成后添加代码块的语言标签和复制按钮
   setTimeout(addCodeBlockHeader, 100)
 })
@@ -669,6 +733,7 @@ onUnmounted(() => {
     headingObserver.disconnect()
   }
   window.removeEventListener('scroll', handleScroll)
+  document.removeEventListener('pointerdown', handleGlobalPointerDown)
 })
 
 // 滚动处理函数
@@ -1465,6 +1530,204 @@ const handleScroll = () => {
   }
 }
 
+.article-license-card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  padding: 28px 32px;
+  margin-top: var(--spacing-2xl);
+  border: 1.5px solid #d1d5db;
+  border-radius: 28px;
+  background: var(--color-bg-secondary);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.license-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+.license-category {
+  display: inline-flex;
+  margin: 0 0 2px;
+}
+
+.license-title {
+  margin: 0;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+}
+
+.license-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 18px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+
+  span,
+  a {
+    position: relative;
+  }
+
+  span:not(:first-child)::before,
+  a::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin-right: 16px;
+    vertical-align: middle;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-accent) 55%, var(--color-text-tertiary));
+  }
+}
+
+.license-link {
+  color: var(--color-accent);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.license-summary {
+  margin: 20px 0 0;
+  color: var(--color-text-primary);
+  font-size: 17px !important;
+  font-weight: 400;
+  line-height: 1.35 !important;
+}
+
+.license-mark {
+  position: absolute;
+  right: 6px;
+  bottom: -22px;
+  z-index: 0;
+  font-size: clamp(132px, 20vw, 220px);
+  line-height: 1;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  font-family: Georgia, 'Times New Roman', serif;
+  user-select: none;
+  pointer-events: none;
+}
+
+.article-tip-action {
+  position: relative;
+  display: flex;
+  width: fit-content;
+  margin-top: 18px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tip-button {
+  position: relative;
+  min-width: 104px;
+  padding: 10px 24px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-accent) 78%, white);
+    transform: translateY(102%);
+    transition: transform 0.22s ease;
+    z-index: 0;
+  }
+
+  span {
+    position: relative;
+    z-index: 1;
+  }
+
+  &:hover,
+  .article-tip-action:focus-within & {
+    transform: translateY(-1px);
+    border-color: var(--color-accent);
+    color: #fff;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+  }
+
+  &:hover::before,
+  .article-tip-action:focus-within &::before {
+    transform: translateY(0);
+  }
+}
+
+.tip-popover {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 14px);
+  z-index: 4;
+  width: 204px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  background: var(--color-bg-secondary);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 8px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    visibility 0.2s ease;
+  pointer-events: none;
+}
+
+.article-tip-action:hover .tip-popover,
+.article-tip-action.active .tip-popover,
+.article-tip-action:focus-within .tip-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article-tip-action:focus-within .tip-popover,
+  .article-tip-action.active .tip-popover {
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, 8px);
+  }
+}
+
+.tip-qr-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #f3f4f6;
+}
+
 /* Article Image */
 .article-image {
   margin: var(--spacing-xl) 0;
@@ -1543,6 +1806,41 @@ const handleScroll = () => {
 @media (max-width: 768px) {
   .article-title {
     font-size: var(--font-size-2xl);
+  }
+
+  .article-license-card {
+    padding: 22px 20px 28px;
+    border-radius: 22px;
+  }
+
+  .license-meta {
+    gap: 8px 0;
+
+    span,
+    a {
+      width: 100%;
+    }
+
+    span::before,
+    a::before {
+      display: none !important;
+    }
+  }
+
+  .license-summary {
+    padding-right: 72px;
+  }
+
+  .license-mark {
+    right: -2px;
+    bottom: -8px;
+    font-size: 112px;
+  }
+
+  .tip-popover {
+    width: 184px;
+    padding: 10px;
+    border-radius: 18px;
   }
 
   .related-grid {
