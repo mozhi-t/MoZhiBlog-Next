@@ -2,12 +2,13 @@
 Category routes.
 """
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from auth import get_current_admin
 from cache import cache
 from logger import logger
-from models import Category, get_db
+from models import Article, Category, get_db
 from schemas import CategoryCreate, CategoryUpdate
 
 router = APIRouter(prefix="/api/categories", tags=["categories"])
@@ -22,14 +23,26 @@ def invalidate_category_cache():
 @router.get("")
 def get_categories(db: Session = Depends(get_db)):
     def load_categories():
-        categories = db.query(Category).order_by(Category.create_time.desc()).all()
+        categories = (
+            db.query(
+                Category.id,
+                Category.name,
+                Category.create_time,
+                func.count(Article.id).label("article_count"),
+            )
+            .outerjoin(Article, Article.category_id == Category.id)
+            .group_by(Category.id, Category.name, Category.create_time)
+            .order_by(Category.create_time.desc())
+            .all()
+        )
         return {
             "code": 200,
             "msg": "success",
             "data": [{
                 "id": c.id,
                 "name": c.name,
-                "create_time": c.create_time.isoformat() if c.create_time else None
+                "create_time": c.create_time.isoformat() if c.create_time else None,
+                "article_count": c.article_count,
             } for c in categories]
         }
 

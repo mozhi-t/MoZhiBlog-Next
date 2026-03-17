@@ -4,7 +4,6 @@
       <h1 class="page-title">分类管理</h1>
     </div>
 
-    <!-- 新增分类 -->
     <div class="add-form">
       <input
         v-model="newCategory"
@@ -18,7 +17,6 @@
       </button>
     </div>
 
-    <!-- 分类列表 -->
     <div class="categories-list">
       <div
         v-for="category in categories"
@@ -44,7 +42,6 @@
       <div v-if="!categories.length" class="empty-tip">暂无分类</div>
     </div>
 
-    <!-- 编辑弹窗 -->
     <div class="modal-overlay" v-if="showModal" @click.self="showModal = false">
       <div class="modal">
         <div class="modal-header">
@@ -82,7 +79,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { categoryApi, articleApi } from '@/api'
+import { categoryApi } from '@/api'
 
 const categories = ref([])
 const newCategory = ref('')
@@ -91,21 +88,10 @@ const editingId = ref(null)
 const editName = ref('')
 const submitting = ref(false)
 
-// 加载分类和文章数量
 const loadCategories = async () => {
   try {
     const res = await categoryApi.list()
-    // 获取每个分类的文章数量
-    const categoriesWithCount = await Promise.all(
-      res.data.map(async (cat) => {
-        const articlesRes = await articleApi.list({ category_id: cat.id, size: 1 })
-        return {
-          ...cat,
-          article_count: articlesRes.data.total
-        }
-      })
-    )
-    categories.value = categoriesWithCount
+    categories.value = res.data || []
   } catch (error) {
     console.error('加载分类失败:', error)
   }
@@ -311,7 +297,6 @@ onMounted(() => {
   padding: var(--spacing-2xl);
 }
 
-// 弹窗样式
 .modal-overlay {
   position: fixed;
   top: 0;

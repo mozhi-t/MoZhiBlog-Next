@@ -292,6 +292,7 @@ const loadArticles = async (page = 1) => {
     total.value = res.data.total || 0
     totalPages.value = res.data.pages || 0
     currentPage.value = page
+    stats.value.articleCount = res.data.total || 0
   } catch (error) {
     console.error('加载文章失败:', error)
   } finally {
@@ -302,9 +303,7 @@ const loadArticles = async (page = 1) => {
 // 加载统计数据
 const loadStats = async () => {
   try {
-    // 并行请求文章、分类、标签数据
-    const [articlesRes, categoriesRes, tagsRes] = await Promise.all([
-      articlesApi.list({ page: 1, size: 1 }), // 只获取总数，不需要详细内容
+    const [categoriesRes, tagsRes] = await Promise.all([
       categoriesApi.list(),
       tagsApi.list()
     ])
@@ -313,12 +312,12 @@ const loadStats = async () => {
     const tags = Array.isArray(tagsRes.data) ? tagsRes.data : []
 
     stats.value = {
-      articleCount: articlesRes.data.total || 0,
+      articleCount: stats.value.articleCount || 0,
       categoryCount: categories.length,
       tagCount: tags.length
     }
   } catch (error) {
-    console.error('加载统计数据失败:', error)
+    console.error('Failed to load stats:', error)
   }
 }
 

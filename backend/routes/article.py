@@ -36,6 +36,16 @@ PASSWORD_VERIFY_WINDOW_SECONDS = 300
 password_verify_records: dict[str, list[float]] = {}
 
 
+def build_tag_match_condition(tag_id: int):
+    tag_id_str = str(tag_id)
+    return or_(
+        Article.tags == tag_id_str,
+        Article.tags.like(f"{tag_id_str},%"),
+        Article.tags.like(f"%,{tag_id_str}"),
+        Article.tags.like(f"%,{tag_id_str},%"),
+    )
+
+
 def build_articles_cache_key(
     page: int,
     size: int,
@@ -217,7 +227,7 @@ def get_articles(
         query = query.filter(Article.category_id == category_id)
 
     if tag_id:
-        query = query.filter(Article.tags.contains(str(tag_id)))
+        query = query.filter(build_tag_match_condition(tag_id))
 
     if type is not None:
         query = query.filter(Article.type == type)

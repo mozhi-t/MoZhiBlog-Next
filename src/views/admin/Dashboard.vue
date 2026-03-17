@@ -2,7 +2,6 @@
   <div class="dashboard">
     <h1 class="page-title">仪表盘</h1>
 
-    <!-- 数据概览 -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon articles">
@@ -44,7 +43,6 @@
       </div>
     </div>
 
-    <!-- 最近内容 -->
     <div class="recent-grid">
       <div class="recent-card">
         <h3 class="card-title">最近文章</h3>
@@ -66,7 +64,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { articleApi, friendLinkApi } from '@/api'
+import { articleApi, friendLinkApi, tagApi } from '@/api'
 
 const stats = ref({
   totalArticles: 0,
@@ -78,18 +76,16 @@ const recentArticles = ref([])
 
 const loadData = async () => {
   try {
-    // 加载文章
-    const articlesRes = await articleApi.list({ page: 1, size: 5 })
-    stats.value.totalArticles = articlesRes.data.total
-    recentArticles.value = articlesRes.data.items
+    const [articlesRes, tagsRes, linksRes] = await Promise.all([
+      articleApi.list({ page: 1, size: 5 }),
+      tagApi.all({ page: 1, size: 1 }),
+      friendLinkApi.all({ page: 1, size: 1 })
+    ])
 
-    // 加载标签
-    const tagsRes = await articleApi.tags()
-    stats.value.totalTags = tagsRes.data.length
-
-    // 加载友链
-    const linksRes = await friendLinkApi.list()
-    stats.value.totalFriendLinks = linksRes.data.length
+    stats.value.totalArticles = articlesRes.data.total || 0
+    recentArticles.value = articlesRes.data.items || []
+    stats.value.totalTags = tagsRes.data.total || 0
+    stats.value.totalFriendLinks = linksRes.data.total || 0
   } catch (error) {
     console.error('加载数据失败:', error)
   }
@@ -115,8 +111,8 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px));
-  gap: var(--spacing-lg, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
 }
 
