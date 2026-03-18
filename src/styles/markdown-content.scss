@@ -55,7 +55,7 @@
   }
 
   h2 {
-    font-size: 27px;
+    font-size: 29px;
     font-weight: 500;
     color: var(--color-text-primary);
     line-height: 1.4;
@@ -70,7 +70,7 @@
   }
 
   h3 {
-    font-size: 23px;
+    font-size: 27px;
     font-weight: 500;
     color: var(--color-text-primary);
     line-height: 1.4;
@@ -82,10 +82,8 @@
     }
   }
 
-  h4,
-  h5,
-  h6 {
-    font-size: 19px;
+  h4 {
+    font-size: 25px;
     font-weight: 500;
     color: var(--color-text-primary);
     line-height: 1.4;
@@ -94,7 +92,35 @@
 
     &::before {
       content: 'H4';
-      color: var(--color-text-tertiary);
+      color: var(--color-accent);
+    }
+  }
+
+  h5 {
+    font-size: 23px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    margin-top: 24px;
+    margin-bottom: 16px;
+
+    &::before {
+      content: 'H5';
+      color: var(--color-accent);
+    }
+  }
+
+  h6 {
+    font-size: 21px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    margin-top: 24px;
+    margin-bottom: 16px;
+
+    &::before {
+      content: 'H6';
+      color: var(--color-accent);
     }
   }
 
@@ -103,11 +129,16 @@
     color: var(--color-text-primary);
     line-height: 1.8;
     margin: 16px 0;
+    text-indent: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
   }
 
   a {
     color: var(--color-accent);
     text-decoration: none;
+    transition: all 0.2s;
 
     &:hover {
       text-decoration: underline;
@@ -124,15 +155,16 @@
     color: var(--color-text-primary);
   }
 
+  /* 列表样式 */
   ul,
   ol {
-    margin: 16px 0;
+    margin: 6px 0;
     padding-left: 0;
     list-style: none;
   }
 
   li {
-    margin: 12px 0;
+    margin: 4px 0;
     color: var(--color-text-primary);
     line-height: 1.8;
     position: relative;
@@ -150,7 +182,12 @@
     }
   }
 
-  ol li {
+  /* 有序列表 - 一级 */
+  ol {
+    counter-reset: item;
+  }
+
+  ol > li {
     padding-left: 30px;
     counter-increment: item;
 
@@ -164,6 +201,73 @@
       top: 12px;
       left: 0;
     }
+  }
+
+  /* 有序列表 - 二级嵌套 */
+  ol > li > ol {
+    counter-reset: item2;
+  }
+
+  ol > li > ol > li {
+    padding-left: 30px;
+    counter-increment: item2;
+
+    &::before {
+      content: counter(item2);
+      background: none;
+      width: auto;
+      height: auto;
+      color: var(--color-text-tertiary);
+      font-size: 14px;
+      top: 12px;
+      left: 0;
+    }
+  }
+
+  /* 有序列表 - 三级嵌套 */
+  ol > li > ol > li > ol {
+    counter-reset: item3;
+  }
+
+  ol > li > ol > li > ol > li {
+    padding-left: 30px;
+    counter-increment: item3;
+
+    &::before {
+      content: counter(item3);
+      background: none;
+      width: auto;
+      height: auto;
+      color: var(--color-text-tertiary);
+      font-size: 14px;
+      top: 12px;
+      left: 0;
+    }
+  }
+
+  /* 任务列表样式 */
+  ul:has(input[type="checkbox"]) {
+    list-style: none;
+    padding-left: 0;
+
+    li {
+      padding-left: 28px;
+
+      &::before {
+        display: none;
+      }
+    }
+  }
+
+  input[type="checkbox"] {
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--color-accent);
   }
 
   blockquote {
@@ -449,12 +553,11 @@
     > p,
     > ul,
     > ol,
-    > blockquote,
+    blockquote,
     p,
     ul,
     ol,
     li,
-    blockquote,
     blockquote p {
       font-size: 15px !important;
       line-height: 1.5 !important;
@@ -566,11 +669,23 @@
     }
 
     h2 {
-      font-size: 23px;
+      font-size: 25px;
     }
 
     h3 {
+      font-size: 23px;
+    }
+
+    h4 {
       font-size: 21px;
+    }
+
+    h5 {
+      font-size: 19px;
+    }
+
+    h6 {
+      font-size: 17px;
     }
 
     p {

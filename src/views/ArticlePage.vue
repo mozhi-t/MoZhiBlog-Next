@@ -435,7 +435,7 @@ const toc = computed(() => {
   const lines = article.value.content.split('\n')
 
   lines.forEach(line => {
-    const match = line.match(/^(#{1,3})\s+(.+)$/)
+    const match = line.match(/^(#{1,6})\s+(.+)$/)
     if (match) {
       const level = match[1].length
       const text = match[2]
@@ -627,7 +627,7 @@ const setupHeadingObserver = () => {
 
   // 等待 DOM 更新
   setTimeout(() => {
-    const headings = document.querySelectorAll('.content-body h1, .content-body h2, .content-body h3')
+    const headings = document.querySelectorAll('.content-body h1, .content-body h2, .content-body h3, .content-body h4, .content-body h5, .content-body h6')
     if (headings.length === 0) return
 
     const observerOptions = {
@@ -1141,6 +1141,30 @@ const handleScroll = () => {
     left: 12px;
   }
 
+  &[style*="--level: 4"] a {
+    padding-left: 56px;
+    font-size: 14px;
+    color: var(--color-text-tertiary);
+  }
+
+  &[style*="--level: 5"] a {
+    padding-left: 68px;
+    font-size: 14px;
+    color: var(--color-text-tertiary);
+  }
+
+  &[style*="--level: 6"] a {
+    padding-left: 80px;
+    font-size: 14px;
+    color: var(--color-text-tertiary);
+  }
+
+  &[style*="--level: 4"]::before,
+  &[style*="--level: 5"]::before,
+  &[style*="--level: 6"]::before {
+    left: 12px;
+  }
+
   &.active {
     a {
       color: var(--color-accent);
@@ -1166,368 +1190,6 @@ const handleScroll = () => {
   /* ============================================
      Markdown 内容样式 - 苹果风格
      ============================================ */
-
-  /* 标题样式 */
-  :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
-    position: relative;
-    transition: all 0.3s ease;
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 50%;
-      transform: translateY(-50%) scale(0.8);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--color-accent);
-      padding: 1px 4px;
-      border-radius: 3px;
-      opacity: 0;
-      filter: blur(4px);
-      transition: all 0.3s ease;
-    }
-
-    &:hover {
-      padding-left: 20px;
-
-      &::before {
-        opacity: 1;
-        filter: blur(0);
-        transform: translateY(-50%) scale(1);
-      }
-    }
-  }
-
-  :deep(h1) {
-    font-size: 31px;
-    font-weight: 500;
-    color: var(--color-text-primary);
-    line-height: 1.4;
-    margin-top: 24px;
-    margin-bottom: 16px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--color-divider);
-
-    &::before {
-      content: 'H1';
-    }
-
-    @media (max-width: 768px) {
-      font-size: 27px;
-    }
-  }
-
-  :deep(h2) {
-    font-size: 27px;
-    font-weight: 500;
-    color: var(--color-text-primary);
-    line-height: 1.4;
-    margin-top: 24px;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--color-accent);
-
-    &::before {
-      content: 'H2';
-    }
-
-    @media (max-width: 768px) {
-      font-size: 23px;
-    }
-  }
-
-  :deep(h3) {
-    font-size: 23px;
-    font-weight: 500;
-    color: var(--color-text-primary);
-    line-height: 1.4;
-    margin-top: 24px;
-    margin-bottom: 16px;
-
-    &::before {
-      content: 'H3';
-    }
-
-    @media (max-width: 768px) {
-      font-size: 21px;
-    }
-  }
-
-  :deep(h4), :deep(h5), :deep(h6) {
-    font-size: 19px;
-    font-weight: 500;
-    color: var(--color-text-primary);
-    line-height: 1.4;
-    margin-top: 24px;
-    margin-bottom: 16px;
-
-    &::before {
-      content: 'H4';
-      color: var(--color-text-tertiary);
-    }
-  }
-
-  /* 段落样式 */
-  :deep(p) {
-    font-size: 19px;
-    color: var(--color-text-primary);
-    line-height: 1.8;
-    margin: 16px 0;
-    text-indent: 0;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    word-break: break-word;
-
-    @media (max-width: 768px) {
-      font-size: 18px;
-    }
-  }
-
-  /* 链接样式 */
-  :deep(a) {
-    color: var(--color-accent);
-    text-decoration: none;
-    transition: all 0.2s;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
-  /* 强调样式 */
-  :deep(em) {
-    font-style: italic;
-    color: var(--color-text-primary);
-  }
-
-  :deep(strong) {
-    font-weight: 700;
-    color: var(--color-text-primary);
-  }
-
-  /* 列表样式 */
-  :deep(ul), :deep(ol) {
-    margin: 16px 0;
-    padding-left: 0;
-    list-style: none;
-  }
-
-  :deep(li) {
-    margin: 12px 0;
-    color: var(--color-text-primary);
-    line-height: 1.8;
-    position: relative;
-    padding-left: 20px;
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 10px;
-      width: 6px;
-      height: 6px;
-      background: var(--color-accent);
-      border-radius: 50%;
-    }
-  }
-
-  :deep(ol li) {
-    padding-left: 30px;
-    counter-increment: item;
-
-    &::before {
-      content: counter(item);
-      background: none;
-      width: auto;
-      height: auto;
-      color: var(--color-text-tertiary);
-      font-size: 14px;
-      top: 12px;
-      left: 0;
-    }
-  }
-
-  /* 引用样式 */
-  :deep(blockquote) {
-    margin: 20px 0;
-    padding: 16px;
-    background: var(--color-bg-tertiary);
-    border-left: 4px solid var(--color-accent);
-    border-radius: 8px;
-
-    p {
-      margin: 0;
-      font-size: 15px;
-      color: var(--color-text-tertiary);
-      line-height: 1.7;
-    }
-  }
-
-  /* 代码块样式 */
-  :deep(.code-block-wrapper) {
-    margin: 20px 0;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.06),
-      0 4px 16px rgba(0, 0, 0, 0.08);
-  }
-
-  :deep(.code-block-wrapper pre) {
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-
-  :deep(.code-block-wrapper code) {
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-
-  :deep(.code-block-wrapper pre code) {
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-
-  :deep(.code-header) {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 16px;
-    background: var(--color-bg-secondary);
-    border-bottom: 1px solid var(--color-border);
-    border-radius: 12px 12px 0 0;
-  }
-
-  :deep(.code-block-wrapper pre) {
-    border-radius: 0 0 12px 12px;
-  }
-
-  :deep(.code-lang) {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--color-accent);
-    text-transform: lowercase;
-  }
-
-  :deep(.copy-btn) {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    background: transparent;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    font-size: 12px;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    svg {
-      width: 14px;
-      height: 14px;
-    }
-
-    &:hover {
-      background: var(--color-accent-light);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
-    }
-
-    &.copied {
-      background: var(--color-accent);
-      border-color: var(--color-accent);
-      color: white;
-    }
-  }
-
-  :deep(pre) {
-    background: var(--color-bg-tertiary);
-    backdrop-filter: blur(4px);
-    padding: 20px;
-    margin: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: pre-wrap;
-    word-break: break-all;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  :deep(code) {
-    background: #e8e8e8;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 14px;
-    color: #4a4a4a;
-    font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
-    white-space: pre-wrap;
-    word-break: break-all;
-    border: 1px solid #d4d4d4;
-  }
-
-  :deep(pre code) {
-    background: transparent;
-    padding: 0;
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--color-text-primary);
-    white-space: pre-wrap;
-    word-break: break-all;
-    border: none;
-  }
-
-  /* 图片样式 */
-  :deep(img) {
-    max-width: 100%;
-    border-radius: 12px;
-    margin: 20px 0;
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-    transition: all 0.3s;
-
-    &:hover {
-      transform: scale(1.01);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    }
-  }
-
-  /* 表格样式 */
-  :deep(table) {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  :deep(th), :deep(td) {
-    padding: 12px;
-    text-align: left;
-  }
-
-  :deep(th) {
-    background: var(--color-bg-tertiary);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    border-bottom: 1px solid var(--color-divider);
-  }
-
-  :deep(td) {
-    color: var(--color-text-primary);
-    border-bottom: 1px solid var(--color-divider);
-  }
-
-  :deep(tr:hover td) {
-    background: var(--color-accent-light);
-  }
-
-  /* 分割线 */
-  :deep(hr) {
-    border: none;
-    border-top: 1px solid var(--color-divider);
-    margin: 24px 0;
-  }
 }
 
 .article-license-card {

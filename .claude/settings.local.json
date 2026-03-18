@@ -11,7 +11,8 @@
       "Bash(curl:*)",
       "mcp__MiniMax__web_search",
       "WebFetch(domain:twikoo.js.org)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(dir:*)"
     ]
   }
 }
