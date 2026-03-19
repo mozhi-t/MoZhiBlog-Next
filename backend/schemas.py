@@ -2,8 +2,24 @@
 Schemas - Pydantic模型定义
 """
 from datetime import datetime
+from urllib.parse import urlparse
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def validate_http_url(value: Optional[str], field_name: str) -> Optional[str]:
+    if value is None:
+        return None
+
+    normalized = value.strip()
+    if not normalized:
+        return None
+
+    parsed = urlparse(normalized)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError(f"{field_name} must be a valid http/https URL")
+
+    return normalized
 
 
 # ==================== 通用响应 ====================
@@ -194,6 +210,19 @@ class FriendLinkCreate(BaseModel):
     signature: Optional[str] = Field(None, max_length=200)
     icon_url: Optional[str] = Field(None, max_length=500)
     link_url: str = Field(..., max_length=500)
+    
+    @field_validator("icon_url")
+    @classmethod
+    def validate_icon_url(cls, value: Optional[str]):
+        return validate_http_url(value, "icon_url")
+
+    @field_validator("link_url")
+    @classmethod
+    def validate_link_url(cls, value: str):
+        validated = validate_http_url(value, "link_url")
+        if validated is None:
+            raise ValueError("link_url must be a valid http/https URL")
+        return validated
     weight: Optional[int] = Field(2, description="权重: 0-挚友, 1-朋友, 2-来客")
 
 
@@ -203,6 +232,16 @@ class FriendLinkUpdate(BaseModel):
     signature: Optional[str] = Field(None, max_length=200)
     icon_url: Optional[str] = Field(None, max_length=500)
     link_url: Optional[str] = Field(None, max_length=500)
+    
+    @field_validator("icon_url")
+    @classmethod
+    def validate_icon_url(cls, value: Optional[str]):
+        return validate_http_url(value, "icon_url")
+
+    @field_validator("link_url")
+    @classmethod
+    def validate_link_url(cls, value: Optional[str]):
+        return validate_http_url(value, "link_url")
     is_show: Optional[int] = None
     weight: Optional[int] = Field(None, description="权重: 0-挚友, 1-朋友, 2-来客")
 

@@ -24,11 +24,13 @@ onMounted(() => {
     <NavHeader v-if="!isAdminPage" />
 
     <main class="main-content" :class="{ 'no-header': isAdminPage }">
-      <router-view v-slot="{ Component }">
-        <Transition name="slide" mode="out-in">
-          <component :is="Component" />
-        </Transition>
-      </router-view>
+      <div class="route-stage">
+        <router-view v-slot="{ Component }">
+          <Transition name="page-fade" appear>
+            <component :is="Component" :key="route.fullPath" class="route-page" />
+          </Transition>
+        </router-view>
+      </div>
     </main>
 
     <SiteFooter v-if="!isAdminPage" />
@@ -46,34 +48,53 @@ onMounted(() => {
 .main-content {
   flex: 1;
   width: 100%;
+  overflow-x: clip;
 
   &.no-header {
     margin-top: 0;
   }
 }
 
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease, opacity 0.3s ease;
+.route-stage {
+  position: relative;
+  width: 100%;
 }
 
-.slide-enter-from {
-  transform: translateX(30px);
-  opacity: 0;
+.route-page {
+  width: 100%;
 }
 
-.slide-leave-to {
-  transform: translateX(-30px);
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  will-change: transform, opacity, filter;
+}
+
+.page-fade-leave-active {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+ }
+
+.page-fade-enter-from,
+.page-fade-leave-to {
   opacity: 0;
+  transform: translateX(28px);
+  filter: blur(6px);
+}
+
+.page-fade-enter-to,
+.page-fade-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+  filter: blur(0);
 }
 
 @media (max-width: 768px) {
-  .slide-enter-from {
+  .page-fade-enter-from,
+  .page-fade-leave-to {
     transform: translateY(20px);
   }
-
-  .slide-leave-to {
-    transform: translateY(-20px);
-  }
 }
+
 </style>

@@ -30,6 +30,100 @@ markdownRenderer.use({
 })
 
 const articleReferenceCache = new Map()
+const SAFE_URL_PATTERN = /^(https?:|mailto:|tel:|\/|#)/i
+const ALLOWED_TAGS = new Set([
+  'a', 'blockquote', 'br', 'code', 'del', 'details', 'div', 'em',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'img', 'li', 'ol', 'p',
+  'pre', 'section', 'span', 'strong', 'summary', 'table', 'tbody',
+  'td', 'th', 'thead', 'tr', 'ul'
+])
+const GLOBAL_ALLOWED_ATTRS = new Set(['class', 'id', 'title'])
+const ALLOWED_ATTRS_BY_TAG = {
+  a: new Set(['href', 'target', 'rel', 'data-article-ref-id']),
+  img: new Set(['src', 'alt', 'title'])
+}
+
+const escapeHtml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+
+const isSafeUrl = (value = '') => SAFE_URL_PATTERN.test(String(value).trim())
+
+const sanitizeHtml = (html = '') => {
+  if (!html || typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    return html
+  }
+
+  const parser = new DOMParser()
+  const parsedDocument = parser.parseFromString(html, 'text/html')
+
+  const sanitizeNode = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.cloneNode(true)
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return null
+    }
+
+    const tagName = node.tagName.toLowerCase()
+    if (!ALLOWED_TAGS.has(tagName)) {
+      if (tagName === 'script' || tagName === 'style' || tagName === 'iframe') {
+        return null
+      }
+
+      const fragment = document.createDocumentFragment()
+      Array.from(node.childNodes).forEach((child) => {
+        const sanitizedChild = sanitizeNode(child)
+        if (sanitizedChild) {
+          fragment.appendChild(sanitizedChild)
+        }
+      })
+      return fragment
+    }
+
+    const cleanNode = document.createElement(tagName)
+    const allowedAttrs = ALLOWED_ATTRS_BY_TAG[tagName] || new Set()
+
+    Array.from(node.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase()
+      const value = attr.value
+
+      if (name.startsWith('on')) return
+      if (!GLOBAL_ALLOWED_ATTRS.has(name) && !allowedAttrs.has(name)) return
+      if ((name === 'href' || name === 'src') && !isSafeUrl(value)) return
+      if (name === 'target' && value !== '_blank') return
+
+      cleanNode.setAttribute(name, value)
+    })
+
+    if (tagName === 'a' && cleanNode.getAttribute('target') === '_blank') {
+      cleanNode.setAttribute('rel', 'noopener noreferrer')
+    }
+
+    Array.from(node.childNodes).forEach((child) => {
+      const sanitizedChild = sanitizeNode(child)
+      if (sanitizedChild) {
+        cleanNode.appendChild(sanitizedChild)
+      }
+    })
+
+    return cleanNode
+  }
+
+  const container = document.createElement('div')
+  Array.from(parsedDocument.body.childNodes).forEach((child) => {
+    const sanitizedChild = sanitizeNode(child)
+    if (sanitizedChild) {
+      container.appendChild(sanitizedChild)
+    }
+  })
+
+  return container.innerHTML
+}
 
 const parseAttrs = (rawAttrs = '') => {
   const attrs = {}
@@ -48,10 +142,10 @@ const renderArticleReference = (attrs) => {
   const id = attrs.id?.trim()
   if (!id) return ''
 
-  return `<a class="custom-article-ref" href="/article/${id}" data-article-ref-id="${id}">
+  return `<a class="custom-article-ref" href="/article/${escapeHtml(id)}" data-article-ref-id="${escapeHtml(id)}">
 <span class="custom-article-ref__label">未分类</span>
 <span class="custom-article-ref__title">加载中...</span>
-<span class="custom-article-ref__meta">文章 #${id}</span>
+<span class="custom-article-ref__meta">文章 #${escapeHtml(id)}</span>
 </a>`
 }
 
@@ -67,8 +161,8 @@ const renderTimeline = (inner = '') => {
 <div class="custom-timeline__dot"></div>
 <div class="custom-timeline__card">
 <div class="custom-timeline__meta">
-<span class="custom-timeline__date">${attrs.date || ''}</span>
-<div class="custom-timeline__title">${attrs.title || ''}</div>
+<span class="custom-timeline__date">${escapeHtml(attrs.date || '')}</span>
+<div class="custom-timeline__title">${escapeHtml(attrs.title || '')}</div>
 </div>
 <div class="custom-timeline__body">${markdownRenderer.parse(body)}</div>
 </div>
@@ -84,7 +178,7 @@ ${items.join('\n')}
 }
 
 const renderFoldedContent = (attrs, inner = '') => {
-  const title = attrs.title?.trim() || '展开查看'
+  const title = escapeHtml(attrs.title?.trim() || '展开查看')
   const body = preprocessCustomMarkdown((inner || '').trim())
 
   return `<details class="custom-folded-content">
@@ -115,7 +209,49 @@ export const preprocessCustomMarkdown = (content = '') => {
 
 export const renderMarkdown = (content = '') => {
   if (!content) return ''
-  return markdownRenderer.parse(preprocessCustomMarkdown(content))
+  return sanitizeHtml(markdownRenderer.parse(preprocessCustomMarkdown(content)))
+}
+
+const buildCopyButton = (code, lang) => {
+  const header = document.createElement('div')
+  header.className = 'code-header'
+
+  const langSpan = document.createElement('span')
+  langSpan.className = 'code-lang'
+  langSpan.textContent = lang
+
+  const button = document.createElement('button')
+  button.className = 'copy-btn'
+  button.dataset.code = encodeURIComponent(code)
+
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  icon.setAttribute('viewBox', '0 0 24 24')
+  icon.setAttribute('fill', 'none')
+  icon.setAttribute('stroke', 'currentColor')
+  icon.setAttribute('stroke-width', '2')
+
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+  rect.setAttribute('x', '9')
+  rect.setAttribute('y', '9')
+  rect.setAttribute('width', '13')
+  rect.setAttribute('height', '13')
+  rect.setAttribute('rx', '2')
+  rect.setAttribute('ry', '2')
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  path.setAttribute('d', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1')
+
+  const label = document.createElement('span')
+  label.textContent = '复制'
+
+  icon.appendChild(rect)
+  icon.appendChild(path)
+  button.appendChild(icon)
+  button.appendChild(label)
+  header.appendChild(langSpan)
+  header.appendChild(button)
+
+  return header
 }
 
 export const enhanceCodeBlocks = (root) => {
@@ -135,21 +271,8 @@ export const enhanceCodeBlocks = (root) => {
     const wrapper = document.createElement('div')
     wrapper.className = 'code-block-wrapper'
 
-    const header = document.createElement('div')
-    header.className = 'code-header'
-    header.innerHTML = `
-      <span class="code-lang">${lang}</span>
-      <button class="copy-btn" data-code="${encodeURIComponent(code)}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-        <span>复制</span>
-      </button>
-    `
-
     pre.parentNode?.insertBefore(wrapper, pre)
-    wrapper.appendChild(header)
+    wrapper.appendChild(buildCopyButton(code, lang))
     wrapper.appendChild(pre)
   })
 

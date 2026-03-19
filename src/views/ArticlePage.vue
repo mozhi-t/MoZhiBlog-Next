@@ -1,5 +1,5 @@
 <template>
-  <div class="article-page" v-if="!loading && !notFound">
+  <div class="article-page" :class="{ 'article-page-entered': articleIntroVisible }" v-if="!loading && !notFound">
     <!-- Article Header -->
     <header class="article-header">
       <div class="header-meta-row">
@@ -251,41 +251,12 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Marked } from 'marked'
-import { markedHighlight } from 'marked-highlight'
-import hljs from 'highlight.js'
 import { useReadingStore } from '../stores/reading'
 import { articlesApi } from '../api/frontend'
 import { SITE_CONFIG } from '../config/site'
 import { TWIKOO_ENV_ID, TWIKOO_CONFIG } from '../config/twikoo'
-import { hydrateArticleReferences, renderMarkdown } from '../utils/markdown'
+import { enhanceCodeBlocks, hydrateArticleReferences, renderMarkdown } from '../utils/markdown'
 import { updateSeo, stripHtml, truncate } from '../utils/seo'
-
-// 配置 marked 使用 highlight.js
-const marked = new Marked(
-  markedHighlight({
-    langPrefix: 'hljs language-',
-    highlight(code, lang) {
-      const language = hljs.getLanguage(lang) ? lang : 'plaintext'
-      return hljs.highlight(code, { language }).value
-    }
-  }),
-  {
-    gfm: true,
-    breaks: true
-  }
-)
-
-// 自定义渲染器
-const renderer = {
-  heading({ tokens, depth }) {
-    const text = this.parser.parseInline(tokens)
-    const id = text.toLowerCase().replace(/[^\u4e00-\u9fa5a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    return `<h${depth} id="${id}">${text}</h${depth}>`
-  }
-}
-
-marked.use({ renderer })
 
 const route = useRoute()
 const router = useRouter()
@@ -344,6 +315,7 @@ const contentRef = ref(null)
 const imagePreviewStageRef = ref(null)
 const tipActionRef = ref(null)
 const isTipPopoverOpen = ref(false)
+const articleIntroVisible = ref(false)
 const IMAGE_PREVIEW_MIN_SCALE = 0.5
 const IMAGE_PREVIEW_MAX_SCALE = 3
 const IMAGE_PREVIEW_STEP = 0.25
@@ -357,6 +329,10 @@ const imagePreview = ref({
   offsetY: 0
 })
 const isDraggingPreview = ref(false)
+let isPageActive = true
+let codeBlockTimer = null
+let headingObserverTimer = null
+let twikooScriptLoading = false
 const previewDragState = {
   pointerId: null,
   startX: 0,
@@ -401,12 +377,36 @@ const readingTime = computed(() => {
   return Math.ceil(wordCount.value / 300)
 })
 
+const scheduleCodeBlockEnhancement = () => {
+  if (codeBlockTimer) {
+    clearTimeout(codeBlockTimer)
+  }
+
+  codeBlockTimer = window.setTimeout(() => {
+    codeBlockTimer = null
+    if (!isPageActive) return
+    addCodeBlockHeader()
+  }, 100)
+}
+
+const playArticleIntro = () => {
+  articleIntroVisible.value = false
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (!isPageActive) return
+      articleIntroVisible.value = true
+    })
+  })
+}
+
 // 从API加载文章
 const loadArticle = async () => {
   try {
     loading.value = true
     notFound.value = false
     passwordError.value = ''
+    articleIntroVisible.value = false
     const id = route.params.id
 
     const res = await articlesApi.detail(id)
@@ -430,9 +430,13 @@ const loadArticle = async () => {
     if (!data.need_password) {
       setupHeadingObserver()
       activeAnchor.value = ''
-      setTimeout(addCodeBlockHeader, 100)
+      scheduleCodeBlockEnhancement()
       initTwikoo()
     }
+
+    nextTick(() => {
+      playArticleIntro()
+    })
   } catch (error) {
     console.error('加载文章失败:', error)
     notFound.value = true
@@ -473,6 +477,10 @@ const verifyPasswordAndReload = async () => {
 const initTwikoo = () => {
   // 确保 DOM 已渲染
   nextTick(() => {
+    if (!isPageActive || !document.querySelector(TWIKOO_CONFIG.el)) {
+      return
+    }
+
     // 如果 Twikoo 已经加载，直接初始化
     if (window.twikoo) {
       initTwikooInstance()
@@ -480,12 +488,22 @@ const initTwikoo = () => {
     }
 
     // 动态加载 Twikoo 脚本
+    if (twikooScriptLoading || document.querySelector('script[src="/twikoo.min.js"]')) {
+      return
+    }
+
     const script = document.createElement('script')
     script.src = '/twikoo.min.js'
+    twikooScriptLoading = true
     script.onload = () => {
+      twikooScriptLoading = false
+      if (!isPageActive) {
+        return
+      }
       initTwikooInstance()
     }
     script.onerror = () => {
+      twikooScriptLoading = false
       console.error('Twikoo 脚本加载失败')
     }
     document.head.appendChild(script)
@@ -494,8 +512,12 @@ const initTwikoo = () => {
 
 // 初始化 Twikoo 实例
 const initTwikooInstance = () => {
-  if (!window.twikoo) {
+  if (!isPageActive || !window.twikoo) {
     console.error('Twikoo 未正确加载')
+    return
+  }
+
+  if (!document.querySelector(TWIKOO_CONFIG.el)) {
     return
   }
 
@@ -789,7 +811,7 @@ watch(() => route.params.id, () => {
 // 监听文章内容变化，重新添加代码块头部
 watch(article, (newArticle) => {
   if (newArticle?.content) {
-    setTimeout(addCodeBlockHeader, 100)
+    scheduleCodeBlockEnhancement()
   }
 }, { deep: true })
 
@@ -802,7 +824,9 @@ const setupHeadingObserver = () => {
   }
 
   // 等待 DOM 更新
-  setTimeout(() => {
+  headingObserverTimer = window.setTimeout(() => {
+    headingObserverTimer = null
+    if (!isPageActive) return
     const headings = document.querySelectorAll('.content-body h1, .content-body h2, .content-body h3, .content-body h4, .content-body h5, .content-body h6')
     if (headings.length === 0) return
 
@@ -842,75 +866,33 @@ onMounted(() => {
   window.addEventListener('pointercancel', stopImageDrag)
   document.addEventListener('pointerdown', handleGlobalPointerDown)
   // 渲染完成后添加代码块的语言标签和复制按钮
-  setTimeout(addCodeBlockHeader, 100)
+  scheduleCodeBlockEnhancement()
 })
 
-// 动态添加代码块的语言标签和复制按钮
 const addCodeBlockHeader = () => {
-  const codeBlocks = document.querySelectorAll('.content-body pre')
-  codeBlocks.forEach(pre => {
-    if (pre.parentNode?.classList.contains('code-block-wrapper')) return // 已处理过
+  const contentRoot = contentRef.value
+  if (!contentRoot) return
 
-    const codeEl = pre.querySelector('code')
-    if (!codeEl) return // 没有 code 元素
+  enhanceCodeBlocks(contentRoot)
 
-    const code = codeEl?.textContent || ''
-    // 获取语言
-    const langEl = codeEl.classList.value.match(/language-(\S+)/)
-    const lang = langEl ? langEl[1] : 'text'
-
-    // 创建包装元素
-    const wrapper = document.createElement('div')
-    wrapper.className = 'code-block-wrapper'
-
-    // 创建头部
-    const header = document.createElement('div')
-    header.className = 'code-header'
-    header.innerHTML = `
-      <span class="code-lang">${lang}</span>
-      <button class="copy-btn" data-code="${encodeURIComponent(code)}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-        <span>复制</span>
-      </button>
-    `
-
-    // 将 pre 包装到 wrapper 中
-    pre.parentNode?.insertBefore(wrapper, pre)
-    wrapper.appendChild(header)
-    wrapper.appendChild(pre)
-  })
-
-  // 绑定复制按钮事件
-  document.querySelectorAll('.content-body .copy-btn').forEach(btn => {
-    btn.onclick = async () => {
-      const code = decodeURIComponent(btn.dataset.code || '')
-      try {
-        await navigator.clipboard.writeText(code)
-        const span = btn.querySelector('span')
-        span.textContent = '已复制'
-        btn.classList.add('copied')
-        setTimeout(() => {
-          span.textContent = '复制'
-          btn.classList.remove('copied')
-        }, 2000)
-      } catch (err) {
-        console.error('复制失败:', err)
-      }
-    }
-  })
-
-  hydrateArticleReferences(document.querySelector('.content-body'), async (id) => {
+  hydrateArticleReferences(contentRoot, async (id) => {
     const res = await articlesApi.reference(id)
     return res.data
   })
 }
 
 onUnmounted(() => {
+  isPageActive = false
   if (headingObserver) {
     headingObserver.disconnect()
+  }
+  if (headingObserverTimer) {
+    clearTimeout(headingObserverTimer)
+    headingObserverTimer = null
+  }
+  if (codeBlockTimer) {
+    clearTimeout(codeBlockTimer)
+    codeBlockTimer = null
   }
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('keydown', handlePreviewKeydown)
@@ -935,6 +917,42 @@ const handleScroll = () => {
   max-width: var(--content-max-width);
   margin: 0 auto;
   padding: calc(var(--nav-height) + 40px) var(--spacing-lg) var(--spacing-3xl);
+}
+
+.article-header,
+.password-panel,
+.article-content,
+.comments-section {
+  opacity: 0;
+  transform: translateY(18px) scale(0.992);
+  filter: blur(10px);
+  transition:
+    opacity 0.42s ease,
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.42s ease;
+  will-change: opacity, transform, filter;
+}
+
+.article-page-entered .article-header,
+.article-page-entered .password-panel,
+.article-page-entered .article-content,
+.article-page-entered .comments-section {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+.article-page-entered .article-header {
+  transition-delay: 0.04s;
+}
+
+.article-page-entered .password-panel,
+.article-page-entered .article-content {
+  transition-delay: 0.1s;
+}
+
+.article-page-entered .comments-section {
+  transition-delay: 0.18s;
 }
 
 /* Article Header */

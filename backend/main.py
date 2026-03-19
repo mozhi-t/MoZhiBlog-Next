@@ -1,5 +1,5 @@
 """
-FastAPI Main Application
+FastAPI main application.
 """
 import pydantic
 from fastapi import FastAPI, Request
@@ -31,15 +31,15 @@ pydantic.DATETIME_STRING_FORMATS = [
 logger = setup_logger(
     log_level=config.LOG_LEVEL,
     log_dir=config.LOG_DIR,
-    backup_count=config.LOG_BACKUP_COUNT
+    backup_count=config.LOG_BACKUP_COUNT,
 )
 
 app = FastAPI(
     title="MoZhi Blog API",
-    description="博客后端 API 接口文档",
+    description="MoZhi Blog backend API",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 app.add_middleware(
@@ -53,14 +53,19 @@ app.add_middleware(
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.exception(f"服务器内部错误: {str(exc)}")
+    logger.exception(
+        "Unhandled server error - method: %s, path: %s, detail: %s",
+        request.method,
+        request.url.path,
+        str(exc),
+    )
     return JSONResponse(
         status_code=500,
         content={
             "code": 500,
-            "msg": f"服务器内部错误: {str(exc)}",
-            "data": None
-        }
+            "msg": "服务器内部错误，请稍后重试。",
+            "data": None,
+        },
     )
 
 
@@ -83,10 +88,10 @@ def root():
 async def startup_event():
     try:
         create_tables()
-        logger.info("数据库表初始化完成")
+        logger.info("Database tables initialized.")
     except Exception as exc:
-        logger.error(f"数据库连接失败: {exc}")
-        logger.warning("请检查数据库配置并确认 MySQL 服务已启动")
+        logger.error("Database initialization failed: %s", exc)
+        logger.warning("Please verify the database configuration and MySQL service status.")
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from auth import get_current_admin
 from cache import cache
+from logger import logger
 from models import Article, Tag, get_db
 from schemas import TagCreate, TagUpdate
 
@@ -28,6 +29,23 @@ def build_tag_match_condition(tag_id: int):
         Article.tags.like(f"%,{tag_id_str}"),
         Article.tags.like(f"%,{tag_id_str},%"),
     )
+
+
+def remove_tag_from_articles(tag_id: int, db: Session) -> int:
+    tag_id_str = str(tag_id)
+    articles = db.query(Article).filter(build_tag_match_condition(tag_id)).all()
+    cleaned_count = 0
+
+    for article in articles:
+        tag_ids = [item.strip() for item in (article.tags or "").split(",") if item.strip()]
+        next_tag_ids = [item for item in tag_ids if item != tag_id_str]
+        next_tags = ",".join(next_tag_ids) if next_tag_ids else None
+
+        if next_tags != article.tags:
+            article.tags = next_tags
+            cleaned_count += 1
+
+    return cleaned_count
 
 
 @router.get("")
@@ -173,8 +191,15 @@ def delete_tag(
             detail="Tag does not exist.",
         )
 
+    cleaned_articles = remove_tag_from_articles(tag_id, db)
     db.delete(tag)
     db.commit()
     invalidate_tag_cache()
+    logger.info(
+        "tag deleted - tag_id: %s, cleaned_articles: %s, author: %s",
+        tag_id,
+        cleaned_articles,
+        admin.username,
+    )
 
     return {"code": 200, "msg": "Delete successful."}

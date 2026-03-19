@@ -3,6 +3,8 @@ RSS feed routes.
 """
 from datetime import datetime, timezone
 from email.utils import format_datetime
+from html import escape as escape_html
+from html.parser import HTMLParser
 import re
 from xml.sax.saxutils import escape
 
@@ -22,6 +24,104 @@ RSS_CACHE_KEY = "feed:rss:v2"
 RSS_CACHE_TTL_SECONDS = 3600
 ATOM_NAMESPACE = "http://www.w3.org/2005/Atom"
 CONTENT_NAMESPACE = "http://purl.org/rss/1.0/modules/content/"
+SAFE_URL_PATTERN = re.compile(r"^(https?:|mailto:|tel:|/|#)", re.IGNORECASE)
+ALLOWED_TAGS = {
+    "a", "blockquote", "br", "code", "del", "details", "div", "em",
+    "h1", "h2", "h3", "h4", "h5", "h6", "hr", "img", "li", "ol", "p",
+    "pre", "section", "span", "strong", "summary", "table", "tbody",
+    "td", "th", "thead", "tr", "ul",
+}
+GLOBAL_ALLOWED_ATTRS = {"class", "id", "title"}
+ALLOWED_ATTRS_BY_TAG = {
+    "a": {"href", "target", "rel"},
+    "img": {"src", "alt", "title"},
+}
+
+
+class SafeHtmlParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.parts: list[str] = []
+        self.open_tags: list[str] = []
+        self.drop_depth = 0
+
+    def handle_starttag(self, tag: str, attrs):
+        tag = tag.lower()
+        if self.drop_depth > 0:
+            self.drop_depth += 1
+            return
+        if tag in {"script", "style", "iframe"}:
+            self.drop_depth = 1
+            return
+        if tag not in ALLOWED_TAGS:
+            return
+
+        sanitized_attrs: list[str] = []
+        allowed_attrs = ALLOWED_ATTRS_BY_TAG.get(tag, set())
+        for name, value in attrs:
+            attr_name = (name or "").lower()
+            attr_value = value or ""
+            if attr_name.startswith("on"):
+                continue
+            if attr_name not in GLOBAL_ALLOWED_ATTRS and attr_name not in allowed_attrs:
+                continue
+            if attr_name in {"href", "src"} and not SAFE_URL_PATTERN.match(attr_value.strip()):
+                continue
+            if attr_name == "target" and attr_value != "_blank":
+                continue
+            if tag == "a" and attr_name == "rel" and "_blank" not in [v for k, v in attrs if (k or "").lower() == "target"]:
+                continue
+            sanitized_attrs.append(f' {attr_name}="{escape_html(attr_value, quote=True)}"')
+
+        if tag == "a" and any((name or "").lower() == "target" and (value or "") == "_blank" for name, value in attrs):
+            if not any(attr.startswith(" rel=") for attr in sanitized_attrs):
+                sanitized_attrs.append(' rel="noopener noreferrer"')
+
+        self.parts.append(f"<{tag}{''.join(sanitized_attrs)}>")
+        self.open_tags.append(tag)
+
+    def handle_endtag(self, tag: str):
+        tag = tag.lower()
+        if self.drop_depth > 0:
+            self.drop_depth -= 1
+            return
+        if tag in ALLOWED_TAGS and tag in self.open_tags:
+            self.parts.append(f"</{tag}>")
+            for index in range(len(self.open_tags) - 1, -1, -1):
+                if self.open_tags[index] == tag:
+                    self.open_tags.pop(index)
+                    break
+
+    def handle_startendtag(self, tag: str, attrs):
+        self.handle_starttag(tag, attrs)
+        if self.open_tags and self.open_tags[-1] == tag:
+            self.handle_endtag(tag)
+
+    def handle_data(self, data: str):
+        if self.drop_depth == 0:
+            self.parts.append(escape_html(data))
+
+    def handle_entityref(self, name: str):
+        if self.drop_depth == 0:
+            self.parts.append(f"&{name};")
+
+    def handle_charref(self, name: str):
+        if self.drop_depth == 0:
+            self.parts.append(f"&#{name};")
+
+    def get_html(self) -> str:
+        while self.open_tags:
+            self.parts.append(f"</{self.open_tags.pop()}>")
+        return "".join(self.parts)
+
+
+def sanitize_html(html: str | None) -> str:
+    if not html:
+        return ""
+    parser = SafeHtmlParser()
+    parser.feed(html)
+    parser.close()
+    return parser.get_html()
 
 
 def format_rss_datetime(value: datetime | None) -> str | None:
@@ -36,10 +136,12 @@ def render_markdown_html(content: str | None) -> str:
     if not content:
         return ""
 
-    return markdown.markdown(
-        content,
-        extensions=["extra", "codehilite", "nl2br", "sane_lists"],
-        output_format="html5",
+    return sanitize_html(
+        markdown.markdown(
+            content,
+            extensions=["extra", "codehilite", "nl2br", "sane_lists"],
+            output_format="html5",
+        )
     )
 
 

@@ -271,11 +271,23 @@
   }
 
   blockquote {
+    position: relative;
     margin: 20px 0;
-    padding: 16px;
+    padding: 16px 16px 16px 18px;
     background: var(--color-bg-tertiary);
-    border-left: 4px solid var(--color-accent);
     border-radius: 8px;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      border-radius: 0 999px 999px 0;
+      background: var(--color-accent);
+    }
 
     p {
       margin: 0;
@@ -592,9 +604,16 @@
 
     blockquote {
       margin: 6px 0 0;
-      padding: 8px 10px;
-      border-left-width: 3px;
+      padding: 8px 10px 8px 14px;
       border-radius: 6px;
+
+      &::before {
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        border-radius: 0 999px 999px 0;
+      }
     }
 
     > *:first-child {
