@@ -4,7 +4,11 @@
       <h1 class="page-title">关于</h1>
     </header>
 
-    <div class="profile-card" ref="targetRef" :class="{ visible: isVisible }">
+    <div
+      class="profile-card"
+      ref="targetRef"
+      :class="{ visible: isVisible }"
+    >
       <div class="avatar">
         <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200" :alt="SITE_CONFIG.author.name" />
       </div>
@@ -33,7 +37,11 @@
     </div>
 
     <div class="about-content">
-      <section class="content-section" v-for="(section, index) in sections" :key="index">
+      <section
+        v-for="(section, index) in sections"
+        :key="index"
+        class="content-section"
+      >
         <h2 class="section-title">{{ section.title }}</h2>
         <p class="section-text">{{ section.content }}</p>
       </section>
@@ -91,11 +99,13 @@ const sections = ref([
 }
 
 .profile-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--spacing-xl);
   padding: var(--spacing-xl);
   background: var(--color-bg-secondary);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   margin-bottom: var(--spacing-2xl);
@@ -117,6 +127,11 @@ const sections = ref([
     flex-direction: column;
     text-align: center;
   }
+}
+
+[data-theme="dark"] .profile-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 .avatar {
@@ -187,6 +202,12 @@ const sections = ref([
 }
 
 .content-section {
+  position: relative;
+  padding: var(--spacing-xl);
+  background: var(--color-bg-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   opacity: 0;
   transform: translateY(10px);
   animation: sectionFadeIn 0.4s ease forwards;
@@ -194,6 +215,11 @@ const sections = ref([
   &:nth-child(1) { animation-delay: 0.1s; }
   &:nth-child(2) { animation-delay: 0.2s; }
   &:nth-child(3) { animation-delay: 0.3s; }
+}
+
+[data-theme="dark"] .content-section {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 @keyframes sectionFadeIn {

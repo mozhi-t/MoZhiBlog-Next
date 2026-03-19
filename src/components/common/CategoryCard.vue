@@ -1,5 +1,6 @@
 <template>
   <router-link
+    ref="cardRef"
     :to="`/category/${slug}`"
     class="category-card"
     :class="{ visible: isVisible }"
@@ -20,6 +21,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useIntersectionObserver } from '../../composables/useObserver'
 
 defineProps({
@@ -37,7 +39,8 @@ defineProps({
   }
 })
 
-const { targetRef, isVisible } = useIntersectionObserver({ threshold: 0.2 })
+const cardRef = ref(null)
+const { isVisible } = useIntersectionObserver({ threshold: 0.2 }, cardRef)
 </script>
 
 <style lang="scss" scoped>
@@ -45,11 +48,13 @@ const { targetRef, isVisible } = useIntersectionObserver({ threshold: 0.2 })
    Category Card - 分类卡片
    ============================================ */
 .category-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
   background: var(--color-bg-secondary);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   text-decoration: none;
@@ -78,6 +83,11 @@ const { targetRef, isVisible } = useIntersectionObserver({ threshold: 0.2 })
       color: var(--color-accent);
     }
   }
+}
+
+[data-theme="dark"] .category-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 .category-icon {

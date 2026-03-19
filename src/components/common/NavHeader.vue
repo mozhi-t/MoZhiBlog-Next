@@ -1,12 +1,24 @@
 <template>
   <!-- FPS Display -->
-  <div class="fps-display" :class="{ scrolled: isScrolled, hovered: isHovered }" @mouseenter="isHovered = true" @mouseleave="isHovered = false" title="当前帧率">
+  <div
+    class="fps-display"
+    :class="{ scrolled: isScrolled, hovered: isHovered }"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
+    title="当前帧率"
+  >
     <span class="fps-value">{{ fps }}</span>
     <span class="fps-text">当前FPS：</span>
   </div>
 
   <!-- Search Box -->
-  <div class="search-box" :class="{ scrolled: isScrolled, 'search-hovered': searchHovered }" @mouseenter="searchHovered = true" @mouseleave="searchHovered = false" title="搜索文章">
+  <div
+    class="search-box"
+    :class="{ scrolled: isScrolled, 'search-hovered': searchHovered }"
+    @mouseenter="searchHovered = true"
+    @mouseleave="searchHovered = false"
+    title="搜索文章"
+  >
     <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
       <circle cx="11" cy="11" r="8" stroke-width="2"/>
       <path d="M21 21l-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
@@ -416,7 +428,7 @@ onUnmounted(() => {
   .nav-prompt-overlay {
     position: absolute;
     inset: 0;
-    z-index: 2;
+    z-index: 3;
     overflow: hidden;
     border-radius: inherit;
     pointer-events: none;
@@ -426,7 +438,7 @@ onUnmounted(() => {
     position: absolute;
     left: 50%;
     bottom: -18%;
-    z-index: 0;
+    z-index: 2;
     width: 34%;
     height: 68%;
     border-radius: 999px;
@@ -445,7 +457,7 @@ onUnmounted(() => {
     content: '';
     position: absolute;
     inset: 0;
-    z-index: 0;
+    z-index: 2;
     border-radius: inherit;
     opacity: 0;
     clip-path: circle(0% at 50% 100%);
@@ -462,7 +474,7 @@ onUnmounted(() => {
     content: '';
     position: absolute;
     inset: 0;
-    z-index: 0;
+    z-index: 2;
     border-radius: inherit;
     background:
       linear-gradient(
@@ -1038,6 +1050,8 @@ onUnmounted(() => {
 [data-theme="dark"] {
   .nav-container {
     background: var(--glass-bg);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-nav);
   }
 
   .nav-container.is-prompt-gradient-visible.is-copy-prompt {

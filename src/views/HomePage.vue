@@ -473,7 +473,9 @@ onUnmounted(() => {
 }
 
 .author-card {
+  position: relative;
   background: var(--color-bg-secondary);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
   text-align: center;
@@ -483,6 +485,11 @@ onUnmounted(() => {
   &:hover {
     box-shadow: var(--shadow-md);
   }
+}
+
+[data-theme="dark"] .author-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 .author-card > .author-avatar,
@@ -690,8 +697,10 @@ onUnmounted(() => {
 
 /* Year Progress Card */
 .year-progress-card {
+  position: relative;
   padding: var(--spacing-lg) var(--spacing-xl);
   background: var(--color-bg-secondary);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   text-align: center;
@@ -700,6 +709,11 @@ onUnmounted(() => {
   &:hover {
     box-shadow: var(--shadow-md);
   }
+}
+
+[data-theme="dark"] .year-progress-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 .year-progress-header {

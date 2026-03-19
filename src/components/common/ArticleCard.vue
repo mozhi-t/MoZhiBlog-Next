@@ -1,6 +1,6 @@
 <template>
   <article
-    ref="targetRef"
+    ref="cardRef"
     class="article-card"
     :class="{ visible: isVisible }"
     @click="goToArticle"
@@ -74,7 +74,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useIntersectionObserver } from '../../composables/useObserver'
 
@@ -90,7 +90,8 @@ const props = defineProps({
 })
 
 const router = useRouter()
-const { targetRef, isVisible } = useIntersectionObserver()
+const cardRef = ref(null)
+const { isVisible } = useIntersectionObserver({}, cardRef)
 
 const escapeHtml = (value = '') => String(value)
   .replace(/&/g, '&amp;')
@@ -161,6 +162,7 @@ const goToTag = (tagId) => {
 .article-card {
   position: relative;
   background: var(--color-bg-secondary);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
@@ -186,6 +188,11 @@ const goToTag = (tagId) => {
   &:active {
     transform: translateY(-4px) scale(0.99);
   }
+}
+
+[data-theme="dark"] .article-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 .card-content {

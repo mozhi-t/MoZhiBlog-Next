@@ -247,11 +247,13 @@ onMounted(() => {
 }
 
 .link-card {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
   background: var(--color-bg-secondary);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   text-decoration: none;
@@ -271,6 +273,11 @@ onMounted(() => {
   &:active {
     transform: translateY(-4px) scale(0.99);
   }
+}
+
+[data-theme="dark"] .link-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 @keyframes cardFadeIn {
@@ -316,10 +323,17 @@ onMounted(() => {
 }
 
 .contact-section {
+  position: relative;
   padding: var(--spacing-xl);
   background: var(--color-bg-secondary);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .contact-section {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 .section-title {

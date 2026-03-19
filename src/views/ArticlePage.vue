@@ -930,6 +930,7 @@ const handleScroll = () => {
 }
 
 .password-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
@@ -949,6 +950,11 @@ const handleScroll = () => {
     margin: 0;
     color: var(--color-text-secondary);
   }
+}
+
+[data-theme="dark"] .password-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 .password-input {
@@ -1027,6 +1033,11 @@ const handleScroll = () => {
   @media (max-width: 1024px) {
     display: none;
   }
+}
+
+[data-theme="dark"] .toc {
+  border-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-secondary);
 }
 
 .toc-header {
@@ -1205,6 +1216,11 @@ const handleScroll = () => {
   background: var(--color-bg-secondary);
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
   overflow: hidden;
+}
+
+[data-theme="dark"] .article-license-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background-color: var(--color-bg-secondary);
 }
 
 .license-main {

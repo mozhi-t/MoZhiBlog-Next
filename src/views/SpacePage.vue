@@ -614,6 +614,10 @@ onUnmounted(() => {
   }
 }
 
+[data-theme="dark"] .month-header {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
 .month-header-ripple {
   position: absolute;
   z-index: 0;
@@ -726,6 +730,7 @@ onUnmounted(() => {
 }
 
 .timeline-card {
+  position: relative;
   padding: var(--spacing-xl);
   background: var(--glass-bg-solid);
   border: 1px solid var(--glass-border);

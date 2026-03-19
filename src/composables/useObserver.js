@@ -4,9 +4,9 @@
  */
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 
-export function useIntersectionObserver(options = {}) {
+export function useIntersectionObserver(options = {}, externalTargetRef = null) {
   const isVisible = ref(false)
-  const targetRef = ref(null)
+  const targetRef = externalTargetRef || ref(null)
   let observer = null
 
   const defaultOptions = {
