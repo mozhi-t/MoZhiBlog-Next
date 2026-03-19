@@ -17,6 +17,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/rss.xml': {
+        target: 'http://localhost:8008',
+        changeOrigin: true
+      },
       '/sitemap.xml': {
         target: 'http://localhost:8008',
         changeOrigin: true

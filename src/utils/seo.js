@@ -141,6 +141,12 @@ export const updateSeo = ({
   upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: image })
 
   upsertLink('link[rel="canonical"]', { rel: 'canonical', href: canonicalUrl })
+  upsertLink('link[rel="alternate"][type="application/rss+xml"]', {
+    rel: 'alternate',
+    type: 'application/rss+xml',
+    title: `${SITE_NAME} RSS`,
+    href: buildCanonicalUrl('/rss.xml')
+  })
 
   removeManagedExtras()
 

@@ -68,6 +68,7 @@ def invalidate_article_cache():
     cache.delete_prefix("articles:hot:")
     cache.delete("categories:list")
     cache.delete("tags:list")
+    cache.delete_prefix("feed:rss:")
 
 
 def get_tags_from_ids(tags_str: Optional[str], db: Session):
