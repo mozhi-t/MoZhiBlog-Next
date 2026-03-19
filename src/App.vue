@@ -1,53 +1,79 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { onMounted } from 'vue'
 import { useThemeStore } from './stores/theme'
 import { useReadingStore } from './stores/reading'
 import NavHeader from './components/common/NavHeader.vue'
 import SiteFooter from './components/common/SiteFooter.vue'
 import ReadingTools from './components/common/ReadingTools.vue'
+import InitialLoader from './components/common/InitialLoader.vue'
 
 const route = useRoute()
 const themeStore = useThemeStore()
 const readingStore = useReadingStore()
+const homeLoaderDone = ref(false)
+const homeLoaderMounted = ref(route.path === '/')
+const homeLoaderActive = ref(route.path === '/')
 
-// 判断是否在后台管理界面
 const isAdminPage = computed(() => route.path.startsWith('/admin'))
+const showInitialLoader = computed(() => homeLoaderMounted.value && !isAdminPage.value)
 
-// Initialize stores on mount
+const handleHomePageReady = () => {
+  if (route.path !== '/' || homeLoaderDone.value) return
+  homeLoaderDone.value = true
+  homeLoaderActive.value = false
+}
+
+const handleLoaderHidden = () => {
+  homeLoaderMounted.value = false
+}
+
 onMounted(() => {
   themeStore.initTheme()
   readingStore.initAll()
 })
+
+watch(
+  () => route.path,
+  (path) => {
+    if (path === '/' && !homeLoaderDone.value) {
+      homeLoaderMounted.value = true
+      homeLoaderActive.value = true
+      return
+    }
+
+    if (path !== '/') {
+      homeLoaderActive.value = false
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
   <div class="app-wrapper">
-    <!-- Navigation -->
+    <InitialLoader
+      v-if="showInitialLoader"
+      :active="homeLoaderActive"
+      @hidden="handleLoaderHidden"
+    />
+
     <NavHeader v-if="!isAdminPage" />
 
-    <!-- Main Content -->
     <main class="main-content" :class="{ 'no-header': isAdminPage }">
       <router-view v-slot="{ Component }">
         <Transition name="slide" mode="out-in">
-          <component :is="Component" />
+          <component :is="Component" @page-ready="handleHomePageReady" />
         </Transition>
       </router-view>
     </main>
 
-    <!-- Footer -->
     <SiteFooter v-if="!isAdminPage" />
-
-    <!-- Reading Tools -->
     <ReadingTools v-if="!isAdminPage" />
   </div>
 </template>
 
 <style lang="scss">
-/* ============================================
-   App Wrapper
-   ============================================ */
 .app-wrapper {
   min-height: 100vh;
   display: flex;
@@ -63,8 +89,6 @@ onMounted(() => {
   }
 }
 
-/* Page Transition Animation */
-/* PC端左右滑动 */
 .slide-enter-active,
 .slide-leave-active {
   transition: transform 0.3s ease, opacity 0.3s ease;
@@ -80,7 +104,6 @@ onMounted(() => {
   opacity: 0;
 }
 
-/* 移动端上下滑动 */
 @media (max-width: 768px) {
   .slide-enter-from {
     transform: translateY(20px);

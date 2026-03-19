@@ -1,5 +1,5 @@
 <template>
-  <div class="home-page">
+  <div ref="pageRootRef" class="home-page">
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-content">
@@ -121,12 +121,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import ArticleCard from '../components/common/ArticleCard.vue'
 import Pagination from '../components/common/Pagination.vue'
 import { articlesApi, categoriesApi, tagsApi } from '../api/frontend'
 import { SITE_CONFIG } from '../config/site'
 import { updateSeo } from '../utils/seo'
+
+const emit = defineEmits(['page-ready'])
 
 // 问候语数据
 const greetingData = {
@@ -233,6 +235,8 @@ const currentSubtitle = ref(subtitles[0])
 const isAnimating = ref(false)
 const showSubtitle = ref(true)
 const loading = ref(true)
+const pageRootRef = ref(null)
+const hasEmittedPageReady = ref(false)
 let timer = null
 
 const currentChars = computed(() => currentSubtitle.value.split(''))
@@ -326,6 +330,72 @@ const handlePageChange = (page) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+const waitForWindowLoad = () => {
+  if (document.readyState === 'complete') {
+    return Promise.resolve()
+  }
+
+  return new Promise(resolve => {
+    const done = () => {
+      window.removeEventListener('load', done)
+      resolve()
+    }
+
+    window.addEventListener('load', done, { once: true })
+  })
+}
+
+const waitForFonts = async () => {
+  if (!document.fonts?.ready) return
+
+  try {
+    await document.fonts.ready
+  } catch (error) {
+    console.warn('Font readiness check failed:', error)
+  }
+}
+
+const waitForImages = (rootElement) => {
+  const images = Array.from(rootElement?.querySelectorAll('img') || [])
+    .filter(image => !image.complete)
+
+  if (!images.length) {
+    return Promise.resolve()
+  }
+
+  return Promise.all(images.map(image => new Promise(resolve => {
+    const done = () => {
+      image.removeEventListener('load', done)
+      image.removeEventListener('error', done)
+      resolve()
+    }
+
+    image.addEventListener('load', done, { once: true })
+    image.addEventListener('error', done, { once: true })
+  })))
+}
+
+const notifyPageReady = () => {
+  if (hasEmittedPageReady.value) return
+  hasEmittedPageReady.value = true
+  emit('page-ready')
+}
+
+const prepareInitialScreen = async () => {
+  try {
+    await Promise.all([
+      loadArticles(),
+      loadStats(),
+      waitForWindowLoad()
+    ])
+  } finally {
+    await nextTick()
+    await waitForFonts()
+    await waitForImages(pageRootRef.value)
+    notifyPageReady()
+  }
+}
+
 const startAnimation = () => {
   if (isAnimating.value) return
   isAnimating.value = true
@@ -346,8 +416,7 @@ const startAnimation = () => {
 
 onMounted(() => {
   startAnimation()
-  loadArticles()
-  loadStats()
+  prepareInitialScreen()
   progressTimer = setInterval(updateProgress, 1000)
 })
 
