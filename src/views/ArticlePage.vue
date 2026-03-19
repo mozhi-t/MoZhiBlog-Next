@@ -123,7 +123,7 @@
       </aside>
 
       <!-- Main Content -->
-      <div class="content-body markdown-content" ref="contentRef">
+      <div class="content-body markdown-content" ref="contentRef" @click="handleContentClick">
         <!-- 渲染Markdown内容 -->
         <div v-html="renderedContent"></div>
         <section class="article-license-card">
@@ -188,6 +188,63 @@
   <div v-else class="not-found-state">
     <h2>文章不存在</h2>
     <router-link to="/" class="back-home">返回首页</router-link>
+  </div>
+  <div
+    v-if="imagePreview.visible"
+    class="image-preview-overlay"
+    :class="{ dragging: isDraggingPreview }"
+    role="dialog"
+    aria-modal="true"
+    aria-label="图片预览"
+    @pointerdown="startImageDrag"
+    @click.self="closeImagePreview"
+    @wheel.prevent="handlePreviewWheel"
+    @dragstart.prevent
+  >
+    <button
+      type="button"
+      class="image-preview-close"
+      aria-label="关闭图片预览"
+      @click="closeImagePreview"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+        <path d="M6 6l12 12"></path>
+        <path d="M18 6l-12 12"></path>
+      </svg>
+    </button>
+    <div
+      ref="imagePreviewStageRef"
+      class="image-preview-stage"
+    >
+      <img
+        class="image-preview-img"
+        :src="imagePreview.src"
+        :alt="imagePreview.alt"
+        draggable="false"
+        :style="{ transform: `translate(${imagePreview.offsetX}px, ${imagePreview.offsetY}px) scale(${imagePreview.scale})` }"
+      />
+    </div>
+    <div class="image-preview-toolbar">
+      <button
+        type="button"
+        class="image-preview-control"
+        aria-label="缩小图片"
+        :disabled="!canZoomOut"
+        @click="zoomOutImage"
+      >
+        -
+      </button>
+      <span class="image-preview-ratio">{{ imagePreviewScaleText }}</span>
+      <button
+        type="button"
+        class="image-preview-control"
+        aria-label="放大图片"
+        :disabled="!canZoomIn"
+        @click="zoomInImage"
+      >
+        +
+      </button>
+    </div>
   </div>
 </template>
 
@@ -283,8 +340,30 @@ const notFound = ref(false)
 const passwordInput = ref('')
 const passwordError = ref('')
 const verifyingPassword = ref(false)
+const contentRef = ref(null)
+const imagePreviewStageRef = ref(null)
 const tipActionRef = ref(null)
 const isTipPopoverOpen = ref(false)
+const IMAGE_PREVIEW_MIN_SCALE = 0.5
+const IMAGE_PREVIEW_MAX_SCALE = 3
+const IMAGE_PREVIEW_STEP = 0.25
+const IMAGE_PREVIEW_WHEEL_STEP = 0.05
+const imagePreview = ref({
+  visible: false,
+  src: '',
+  alt: '',
+  scale: 1,
+  offsetX: 0,
+  offsetY: 0
+})
+const isDraggingPreview = ref(false)
+const previewDragState = {
+  pointerId: null,
+  startX: 0,
+  startY: 0,
+  originX: 0,
+  originY: 0
+}
 
 // 文章数据
 const article = ref({
@@ -455,6 +534,9 @@ const renderedContent = computed(() => {
 
 // Image lazy loading
 const imageLoaded = ref(false)
+const canZoomOut = computed(() => imagePreview.value.scale > IMAGE_PREVIEW_MIN_SCALE)
+const canZoomIn = computed(() => imagePreview.value.scale < IMAGE_PREVIEW_MAX_SCALE)
+const imagePreviewScaleText = computed(() => `${Math.round(imagePreview.value.scale * 100)}%`)
 
 // Active anchor tracking
 const activeAnchor = ref('')
@@ -513,6 +595,100 @@ const scrollToAnchor = (id) => {
       isScrollingToAnchor = false
     }, 1500)
   }
+}
+
+const setImagePreviewScale = (nextScale) => {
+  imagePreview.value.scale = Math.min(
+    IMAGE_PREVIEW_MAX_SCALE,
+    Math.max(IMAGE_PREVIEW_MIN_SCALE, Number(nextScale.toFixed(2)))
+  )
+
+  if (imagePreview.value.scale <= 1) {
+    imagePreview.value.offsetX = 0
+    imagePreview.value.offsetY = 0
+  }
+}
+
+const openImagePreview = (src, alt = '') => {
+  if (!src) return
+  imagePreview.value = {
+    visible: true,
+    src,
+    alt,
+    scale: 1,
+    offsetX: 0,
+    offsetY: 0
+  }
+  document.body.style.overflow = 'hidden'
+}
+
+const closeImagePreview = () => {
+  stopImageDrag()
+  imagePreview.value.visible = false
+  document.body.style.overflow = ''
+}
+
+const zoomInImage = () => {
+  setImagePreviewScale(imagePreview.value.scale + IMAGE_PREVIEW_STEP)
+}
+
+const zoomOutImage = () => {
+  setImagePreviewScale(imagePreview.value.scale - IMAGE_PREVIEW_STEP)
+}
+
+const handlePreviewWheel = (event) => {
+  if (event.target.closest('.image-preview-close, .image-preview-toolbar')) return
+
+  const direction = Math.sign(event.deltaY)
+  if (direction === 0) return
+
+  setImagePreviewScale(
+    imagePreview.value.scale + (direction < 0 ? IMAGE_PREVIEW_WHEEL_STEP : -IMAGE_PREVIEW_WHEEL_STEP)
+  )
+}
+
+const startImageDrag = (event) => {
+  if (event.button !== 0) return
+  if (event.target.closest('.image-preview-close, .image-preview-toolbar')) return
+
+  event.preventDefault()
+  previewDragState.pointerId = event.pointerId
+  previewDragState.startX = event.clientX
+  previewDragState.startY = event.clientY
+  previewDragState.originX = imagePreview.value.offsetX
+  previewDragState.originY = imagePreview.value.offsetY
+  isDraggingPreview.value = true
+  imagePreviewStageRef.value?.setPointerCapture?.(event.pointerId)
+}
+
+const handleImageDrag = (event) => {
+  if (!isDraggingPreview.value || event.pointerId !== previewDragState.pointerId) return
+
+  imagePreview.value.offsetX = previewDragState.originX + (event.clientX - previewDragState.startX)
+  imagePreview.value.offsetY = previewDragState.originY + (event.clientY - previewDragState.startY)
+}
+
+const stopImageDrag = (event) => {
+  if (event && previewDragState.pointerId !== null && event.pointerId !== previewDragState.pointerId) return
+
+  if (previewDragState.pointerId !== null) {
+    imagePreviewStageRef.value?.releasePointerCapture?.(previewDragState.pointerId)
+  }
+
+  previewDragState.pointerId = null
+  isDraggingPreview.value = false
+}
+
+const handlePreviewKeydown = (event) => {
+  if (event.key === 'Escape' && imagePreview.value.visible) {
+    closeImagePreview()
+  }
+}
+
+const handleContentClick = (event) => {
+  const image = event.target.closest('img')
+  if (!image || !contentRef.value?.contains(image)) return
+  openImagePreview(image.currentSrc || image.src, image.alt || '')
 }
 
 // Format date (with time for article metadata)
@@ -660,6 +836,10 @@ onMounted(() => {
   loadArticle()
   calculateProgress()
   window.addEventListener('scroll', handleScroll, { passive: true })
+  window.addEventListener('keydown', handlePreviewKeydown)
+  window.addEventListener('pointermove', handleImageDrag)
+  window.addEventListener('pointerup', stopImageDrag)
+  window.addEventListener('pointercancel', stopImageDrag)
   document.addEventListener('pointerdown', handleGlobalPointerDown)
   // 渲染完成后添加代码块的语言标签和复制按钮
   setTimeout(addCodeBlockHeader, 100)
@@ -733,7 +913,12 @@ onUnmounted(() => {
     headingObserver.disconnect()
   }
   window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('keydown', handlePreviewKeydown)
+  window.removeEventListener('pointermove', handleImageDrag)
+  window.removeEventListener('pointerup', stopImageDrag)
+  window.removeEventListener('pointercancel', stopImageDrag)
   document.removeEventListener('pointerdown', handleGlobalPointerDown)
+  document.body.style.overflow = ''
 })
 
 // 滚动处理函数
@@ -1203,6 +1388,129 @@ const handleScroll = () => {
      ============================================ */
 }
 
+.content-body :deep(img) {
+  cursor: zoom-in;
+}
+
+.image-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px 112px;
+  background: rgba(15, 23, 42, 0.86);
+  backdrop-filter: blur(10px);
+  cursor: grab;
+
+  &.dragging {
+    cursor: grabbing;
+  }
+}
+
+.image-preview-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 2;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.04);
+  }
+}
+
+.image-preview-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.image-preview-img {
+  max-width: min(100%, 1100px);
+  max-height: calc(100vh - 220px);
+  object-fit: contain;
+  transform-origin: center center;
+  user-select: none;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  border-radius: 16px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.image-preview-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.62);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.26);
+}
+
+.image-preview-control {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.22);
+    transform: scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.image-preview-ratio {
+  min-width: 72px;
+  text-align: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .article-license-card {
   position: relative;
   display: flex;
@@ -1484,6 +1792,35 @@ const handleScroll = () => {
 @media (max-width: 768px) {
   .article-title {
     font-size: var(--font-size-2xl);
+  }
+
+  .image-preview-overlay {
+    padding: 24px 12px 96px;
+  }
+
+  .image-preview-close {
+    top: 16px;
+    right: 16px;
+    width: 42px;
+    height: 42px;
+  }
+
+  .image-preview-img {
+    max-width: 100%;
+    max-height: calc(100vh - 180px);
+    border-radius: 12px;
+  }
+
+  .image-preview-toolbar {
+    gap: 12px;
+    bottom: 20px;
+    padding: 8px 12px;
+  }
+
+  .image-preview-control {
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
   }
 
   .article-license-card {

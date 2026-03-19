@@ -14,6 +14,7 @@ const dots = Array.from({ length: 7 }, (_, index) => index)
 const visible = ref(true)
 const isFinishing = ref(false)
 let finishTimer = null
+const FINISH_HIDE_DELAY = 680
 
 const clearTimers = () => {
   if (finishTimer) {
@@ -30,7 +31,7 @@ const finishAndHide = () => {
     visible.value = false
     isFinishing.value = false
     emit('hidden')
-  }, 1550)
+  }, FINISH_HIDE_DELAY)
 }
 
 watch(
@@ -91,9 +92,9 @@ onBeforeUnmount(() => {
     radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.72), rgba(245, 245, 247, 0.96) 42%, #eef0f3 100%);
   backdrop-filter: blur(10px) saturate(110%);
   transition:
-    opacity 1.05s cubic-bezier(0.22, 1, 0.36, 1),
-    background 1.5s cubic-bezier(0.22, 1, 0.36, 1),
-    backdrop-filter 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.58s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.68s cubic-bezier(0.22, 1, 0.36, 1),
+    backdrop-filter 0.68s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 [data-theme="dark"] .initial-loader {
@@ -108,9 +109,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 14px;
   transition:
-    opacity 0.82s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 1s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .initial-loader__label {
@@ -166,21 +167,22 @@ onBeforeUnmount(() => {
 
 .initial-loader.is-finishing {
   pointer-events: none;
+  opacity: 0;
   background:
-    radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0), rgba(245, 245, 247, 0.18) 42%, rgba(238, 240, 243, 0) 100%);
+    radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0), rgba(245, 245, 247, 0.1) 42%, rgba(238, 240, 243, 0) 100%);
   backdrop-filter: blur(0px) saturate(100%);
 }
 
 [data-theme="dark"] .initial-loader.is-finishing {
   background:
-    radial-gradient(circle at 50% 16%, rgba(78, 78, 82, 0), rgba(22, 22, 24, 0.14) 42%, rgba(7, 7, 7, 0) 100%);
+    radial-gradient(circle at 50% 16%, rgba(78, 78, 82, 0), rgba(22, 22, 24, 0.08) 42%, rgba(7, 7, 7, 0) 100%);
 }
 
 .initial-loader-fade-enter-active,
 .initial-loader-fade-leave-active {
   transition:
-    opacity 1.3s cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 1.3s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .initial-loader-fade-enter-from,
