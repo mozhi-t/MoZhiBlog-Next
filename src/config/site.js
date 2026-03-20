@@ -1,67 +1,192 @@
-const siteUrl = (import.meta.env.VITE_SITE_URL || 'https://blog.mozhi.top').replace(/\/$/, '')
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
+const FALLBACK_SITE_URL = 'https://blog.mozhi.top'
+const FALLBACK_API_BASE_URL = '/api'
+const SITE_CONFIG_GLOBAL_KEY = '__MOZHI_SITE_CONFIG__'
 
-export const SITE_CONFIG = {
-  name: 'MoZhi Blog',
-  title: 'MoZhi 的个人博客',
-  shortName: 'MoZhi',
-  url: siteUrl,
-  description: '专注于前端开发、编程实践、学习记录与生活思考的个人博客。',
+const trimTrailingSlash = (value = '') => String(value || '').replace(/\/$/, '')
+const isPlainObject = (value) => Object.prototype.toString.call(value) === '[object Object]'
+
+const defaultSiteUrl = trimTrailingSlash(
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_SITE_URL
+    ? import.meta.env.VITE_SITE_URL
+    : FALLBACK_SITE_URL
+)
+
+const defaultApiBaseUrl = trimTrailingSlash(
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL
+    ? import.meta.env.VITE_API_BASE_URL
+    : FALLBACK_API_BASE_URL
+)
+
+const DEFAULT_SITE_CONFIG = {
+  name: '',
+  title: '',
+  shortName: '',
+  url: defaultSiteUrl,
+  description: '',
   locale: 'zh_CN',
   api: {
-    baseUrl: apiBaseUrl
+    baseUrl: defaultApiBaseUrl
   },
   author: {
-    name: 'MoZhi',
+    name: '',
     avatar: '/favicon.ico',
-    bio: '远方很远，步履不停，未来可期',
-    intro: 'Hi~ 欢迎光临 MoZhi 的个人博客，这里存放技术分析、学习笔记、生活感悟和一些有趣的效果，希望你能在这里找到有用的知识和灵感。',
-    aboutBio: '前端开发者 / 设计爱好者 / 终身学习者',
-    email: 'mozhi.it@qq.com',
+    bio: '',
+    intro: '',
+    aboutBio: '',
+    email: '',
     socialLinks: {
-      github: 'https://github.com/mozhi-it',
-      twitter: 'https://twitter.com',
-      email: 'mailto:mozhi.it@qq.com'
+      github: '',
+      twitter: '',
+      email: ''
     }
   },
   seo: {
-    defaultImage: `${siteUrl}/favicon.ico`,
-    keywords: [
-      'MoZhi Blog',
-      'MoZhi',
-      '个人博客',
-      '前端开发',
-      'Vue',
-      'JavaScript',
-      '编程',
-      '技术博客'
-    ]
+    defaultImage: `${defaultSiteUrl}/favicon.ico`,
+    keywords: []
   },
   twikoo: {
-    envId: import.meta.env.VITE_TWIKOO_ENV_ID || 'https://twikoo-api.mozhix.top/',
+    envId: typeof import.meta !== 'undefined' && import.meta.env?.VITE_TWIKOO_ENV_ID
+      ? import.meta.env.VITE_TWIKOO_ENV_ID
+      : '',
     el: '#tcomment',
     lang: 'zh-CN',
     path: ''
   },
   article: {
-    tipQrCode: '/tip-qr-code.png'
+    tipQrCode: ''
   },
   friendLink: {
-    intro: '如果你想交换友链，可以在下方评论区留下你的友链信息，或者通过邮箱联系我，我看到后会尽快添加。',
-    siteName: 'MoZhi Blog',
-    siteUrl,
-    avatar: 'https://mozhi.s3.bitiful.net/cropped-tou.jpg',
-    description: '远方很远，步履不停，未来可期'
+    intro: '',
+    siteName: '',
+    siteUrl: defaultSiteUrl,
+    avatar: '',
+    description: ''
   },
   footer: {
-    startDate: '2024-10-08',
-    copyright: 'All rights reserved.',
-    links: [
-      { label: 'GitHub', href: 'https://github.com/mozhi-it', external: true },
-      { label: 'RSS', href: '/rss.xml', external: false },
-      { label: '林柚云', href: 'https://www.lyvps.net', external: true }
-    ]
+    startDate: '',
+    copyright: '',
+    links: []
+  },
+  analytics: {
+    sdkSnippets: []
   }
+}
+
+const deepMerge = (base, override) => {
+  if (Array.isArray(base) || Array.isArray(override)) {
+    return Array.isArray(override) ? [...override] : Array.isArray(base) ? [...base] : override
+  }
+
+  if (!isPlainObject(base) || !isPlainObject(override)) {
+    return override === undefined ? base : override
+  }
+
+  const merged = { ...base }
+  for (const key of Object.keys(override)) {
+    merged[key] = deepMerge(base[key], override[key])
+  }
+  return merged
+}
+
+const runtimeConfig = typeof window !== 'undefined' ? window[SITE_CONFIG_GLOBAL_KEY] : null
+const mergedConfig = deepMerge(DEFAULT_SITE_CONFIG, runtimeConfig || {})
+
+mergedConfig.url = trimTrailingSlash(mergedConfig.url || DEFAULT_SITE_CONFIG.url)
+mergedConfig.api = {
+  ...DEFAULT_SITE_CONFIG.api,
+  ...mergedConfig.api,
+  baseUrl: trimTrailingSlash(mergedConfig.api?.baseUrl || DEFAULT_SITE_CONFIG.api.baseUrl)
+}
+mergedConfig.author = {
+  ...DEFAULT_SITE_CONFIG.author,
+  ...mergedConfig.author,
+  socialLinks: {
+    ...DEFAULT_SITE_CONFIG.author.socialLinks,
+    ...mergedConfig.author?.socialLinks
+  }
+}
+mergedConfig.seo = {
+  ...DEFAULT_SITE_CONFIG.seo,
+  ...mergedConfig.seo,
+  defaultImage: mergedConfig.seo?.defaultImage || `${mergedConfig.url}/favicon.ico`,
+  keywords: Array.isArray(mergedConfig.seo?.keywords) ? mergedConfig.seo.keywords : []
+}
+mergedConfig.twikoo = {
+  ...DEFAULT_SITE_CONFIG.twikoo,
+  ...mergedConfig.twikoo
+}
+mergedConfig.article = {
+  ...DEFAULT_SITE_CONFIG.article,
+  ...mergedConfig.article
+}
+mergedConfig.friendLink = {
+  ...DEFAULT_SITE_CONFIG.friendLink,
+  ...mergedConfig.friendLink,
+  siteUrl: trimTrailingSlash(mergedConfig.friendLink?.siteUrl || mergedConfig.url)
+}
+mergedConfig.footer = {
+  ...DEFAULT_SITE_CONFIG.footer,
+  ...mergedConfig.footer,
+  links: Array.isArray(mergedConfig.footer?.links) ? mergedConfig.footer.links : []
+}
+mergedConfig.analytics = {
+  ...DEFAULT_SITE_CONFIG.analytics,
+  ...mergedConfig.analytics,
+  sdkSnippets: Array.isArray(mergedConfig.analytics?.sdkSnippets)
+    ? mergedConfig.analytics.sdkSnippets.filter(item => typeof item === 'string' && item.trim())
+    : []
+}
+
+export const SITE_CONFIG = mergedConfig
+
+export const injectAnalyticsSdkScripts = () => {
+  if (typeof document === 'undefined') return
+
+  SITE_CONFIG.analytics.sdkSnippets.forEach((snippet, index) => {
+    const marker = `site-analytics-sdk-${index}`
+    if (document.head.querySelector(`[data-site-sdk="${marker}"]`)) {
+      return
+    }
+
+    const normalizedSnippet = snippet.trim()
+    if (!normalizedSnippet) {
+      return
+    }
+
+    if (!/<script[\s>]/i.test(normalizedSnippet)) {
+      const script = document.createElement('script')
+      script.dataset.siteSdk = marker
+      script.text = normalizedSnippet
+      document.head.appendChild(script)
+      return
+    }
+
+    const template = document.createElement('template')
+    template.innerHTML = normalizedSnippet
+
+    Array.from(template.content.childNodes).forEach((node, nodeIndex) => {
+      if (node.nodeType === Node.TEXT_NODE && !node.textContent?.trim()) {
+        return
+      }
+
+      if (node.nodeType === Node.ELEMENT_NODE && node.tagName.toLowerCase() === 'script') {
+        const script = document.createElement('script')
+        Array.from(node.attributes).forEach((attr) => {
+          script.setAttribute(attr.name, attr.value)
+        })
+        script.dataset.siteSdk = `${marker}-${nodeIndex}`
+        script.text = node.textContent || ''
+        document.head.appendChild(script)
+        return
+      }
+
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const clonedNode = node.cloneNode(true)
+        clonedNode.dataset.siteSdk = `${marker}-${nodeIndex}`
+        document.head.appendChild(clonedNode)
+      }
+    })
+  })
 }
 
 export const SITE_NAME = SITE_CONFIG.name

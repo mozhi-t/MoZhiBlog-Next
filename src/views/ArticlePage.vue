@@ -1,4 +1,5 @@
 <template>
+  <div class="article-page-shell">
   <div class="article-page" :class="{ 'article-page-entered': articleIntroVisible }" v-if="!loading && !notFound">
     <!-- Article Header -->
     <header class="article-header">
@@ -16,7 +17,7 @@
             {{ article.category }}
           </router-link>
           <div class="header-badges" v-if="article.isTop || article.needPassword">
-            <span v-if="article.isTop" class="header-badge top">置顶文章</span>
+            <span v-if="article.isTop" class="header-badge top">置顶</span>
             <span v-if="article.needPassword" class="header-badge password">密码保护</span>
           </div>
         </div>
@@ -245,6 +246,7 @@
         +
       </button>
     </div>
+  </div>
   </div>
 </template>
 
