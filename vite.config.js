@@ -15,4 +15,20 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    proxy: {
+      '/rss.xml': {
+        target: 'http://localhost:8008',
+        changeOrigin: true
+      },
+      '/sitemap.xml': {
+        target: 'http://localhost:8008',
+        changeOrigin: true
+      },
+      '/api': {
+        target: 'http://localhost:8008',
+        changeOrigin: true
+      }
+    }
+  }
 })

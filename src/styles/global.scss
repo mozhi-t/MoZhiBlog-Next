@@ -1,0 +1,324 @@
+/**
+ * Apple-style Blog - Global Styles
+ * 苹果风格博客 - 全局样式
+ *
+ * Design System:
+ * - Colors: Ivory (#F5F5F7), Deep Space Gray (#1D1D1F), Silver (#E8E8ED)
+ * - Accent: Apple Blue (#0066CC)
+ * - Typography: -apple-system, BlinkMacSystemFont, "San Francisco", "Helvetica Neue"
+ * - Animation: Smooth transitions (0.2-0.5s), hardware-accelerated transforms
+ */
+@use './markdown-content.scss';
+
+/* ============================================
+   Font Face - 自定义字体
+   ============================================ */
+@font-face {
+  font-family: 'Ziti';
+  src: url('@/assets/fonts/ziti.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================
+   CSS Variables - Theme System
+   ============================================ */
+:root {
+  /* Primary Colors */
+  --color-bg-primary: #F5F5F7;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-tertiary: #FAFAFA;
+
+  /* Text Colors */
+  --color-text-primary: #1D1D1F;
+  --color-text-secondary: #6E6E73;
+  --color-text-tertiary: #86868B;
+
+  /* Accent Color */
+  --color-accent: #0066CC;
+  --color-accent-hover: #004499;
+  --color-accent-light: rgba(0, 102, 204, 0.1);
+
+  /* Border & Divider */
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-divider: rgba(0, 0, 0, 0.05);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --shadow-nav: 0 8px 30px rgba(0, 0, 0, 0.12);
+
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-solid: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-blur: blur(10px);
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-nav: 30px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-family: 'Ziti', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 32px;
+  --font-size-4xl: 40px;
+  --font-size-5xl: 48px;
+
+  --line-height-base: 1.6;
+  --line-height-tight: 1.3;
+  --line-height-relaxed: 1.8;
+
+  /* Transitions - 细腻动效 */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-smooth: 0.3s ease-in-out;
+  --transition-slow: 0.4s ease-out;
+
+  /* Layout */
+  --content-max-width: 1250px;
+  --nav-width: 80%;
+  --nav-height: 60px;
+  --nav-height-scrolled: 50px;
+}
+
+/* Dark Mode */
+[data-theme="dark"] {
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #1D1D1F;
+  --color-bg-tertiary: #2C2C2E;
+
+  --color-text-primary: #F5F5F7;
+  --color-text-secondary: #A1A1A6;
+  --color-text-tertiary: #636366;
+
+  --color-accent: #0A84FF;
+  --color-accent-hover: #409CFF;
+  --color-accent-light: rgba(10, 132, 255, 0.15);
+
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-divider: rgba(255, 255, 255, 0.06);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-nav: 0 8px 30px rgba(0, 0, 0, 0.5);
+
+  --glass-bg: rgba(30, 30, 30, 0.7);
+  --glass-bg-solid: rgba(30, 30, 30, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   Base Reset & Defaults
+   ============================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  transition: background-color var(--transition-smooth), color var(--transition-smooth);
+  overflow-x: hidden;
+}
+
+/* Hardware Acceleration - 动效优化 */
+.hw-accelerate {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* ============================================
+   Typography
+   ============================================ */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
+}
+
+h1 { font-size: var(--font-size-5xl); }
+h2 { font-size: var(--font-size-4xl); }
+h3 { font-size: var(--font-size-3xl); }
+h4 { font-size: var(--font-size-2xl); }
+h5 { font-size: var(--font-size-xl); }
+h6 { font-size: var(--font-size-lg); }
+
+p {
+  margin-bottom: var(--spacing-md);
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color var(--transition-base);
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.container {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+/* Animation Classes */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--transition-smooth);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Slide Animation - PC端左右滑动 */
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform var(--transition-smooth), opacity var(--transition-smooth);
+}
+
+.slide-enter-from {
+  transform: translateX(30px);
+  opacity: 0;
+}
+
+.slide-leave-to {
+  transform: translateX(-30px);
+  opacity: 0;
+}
+
+/* Slide Up Animation - 移动端上下滑动 */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform var(--transition-smooth), opacity var(--transition-smooth);
+}
+
+.slide-up-enter-from {
+  transform: translateY(20px);
+  opacity: 0;
+}
+
+.slide-up-leave-to {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+
+/* Stagger Animation - 顺序延迟 */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: staggerIn 0.4s ease forwards;
+}
+
+@keyframes staggerIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-tertiary);
+  border-radius: var(--radius-full);
+  opacity: 0.5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* ============================================
+   Selection
+   ============================================ */
+::selection {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+}
+
+/* ============================================
+   Focus States
+   ============================================ */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   Responsive Breakpoints
+   ============================================ */
+@media (max-width: 768px) {
+  :root {
+    --font-size-5xl: 36px;
+    --font-size-4xl: 30px;
+    --font-size-3xl: 26px;
+    --spacing-lg: 16px;
+    --spacing-xl: 24px;
+    --spacing-2xl: 32px;
+    --nav-width: 94%;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --font-size-5xl: 28px;
+    --font-size-4xl: 24px;
+    --font-size-3xl: 22px;
+  }
+}
