@@ -543,7 +543,7 @@ onUnmounted(() => {
 
 .page-description {
   color: var(--color-text-tertiary);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
 }
 
 .timeline-group-list {

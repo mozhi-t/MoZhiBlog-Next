@@ -150,7 +150,7 @@ onMounted(() => {
 }
 
 .page-description {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
   color: var(--color-text-tertiary);
 }
 
