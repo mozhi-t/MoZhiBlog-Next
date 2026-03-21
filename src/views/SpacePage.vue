@@ -2,7 +2,7 @@
   <div class="space-page">
     <header class="page-header">
       <h1 class="page-title">空间</h1>
-      <p class="page-description">记录一些日常碎碎念、瞬间想法和零散片段。</p>
+      <p class="page-description">细碎日常，皆为序章</p>
     </header>
 
     <div v-if="initialLoading" class="loading-state">
