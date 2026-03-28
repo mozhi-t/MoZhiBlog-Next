@@ -13,9 +13,10 @@
 /* ============================================
    Font Face - 自定义字体
    ============================================ */
+//noinspection CssUnknownTarget
 @font-face {
   font-family: 'Ziti';
-  src: url('@/assets/fonts/ziti.woff2') format('woff2');
+  src: url('/fonts/ziti.woff2') format('woff2');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
