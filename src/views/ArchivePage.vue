@@ -10,31 +10,22 @@
     </div>
 
     <div v-else class="timeline">
-      <div
-        v-for="(yearGroup, year) in archiveData"
-        :key="year"
-        class="timeline-year"
-      >
+      <div v-for="yearGroup in archiveData" :key="yearGroup.year" class="timeline-year">
         <button
           class="year-header"
-          :class="{ expanded: expandedYears.includes(year) }"
-          @click="toggleYear(year)"
+          :class="{ expanded: expandedYears.includes(yearGroup.year) }"
+          @click="toggleYear(yearGroup.year)"
         >
-          <span class="year-label">{{ year }}</span>
-          <span class="year-count">{{ yearGroup.length }} 篇</span>
+          <span class="year-label">{{ yearGroup.year }}</span>
+          <span class="year-count">{{ yearGroup.articles.length }} 篇</span>
           <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M6 9l6 6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
 
         <Transition name="expand">
-          <ul v-if="expandedYears.includes(year)" class="year-articles">
-            <li
-              v-for="(article, index) in yearGroup"
-              :key="article.id"
-              class="timeline-item"
-              :style="{ transitionDelay: `${index * 0.05}s` }"
-            >
+          <ul v-if="expandedYears.includes(yearGroup.year)" class="year-articles">
+            <li v-for="(article, index) in yearGroup.articles" :key="article.id" class="timeline-item" :style="{ transitionDelay: `${index * 0.05}s` }">
               <span class="article-date">{{ article.date }}</span>
               <router-link :to="`/article/${article.id}`" class="article-link">
                 {{ article.title }}
@@ -44,7 +35,7 @@
         </Transition>
       </div>
 
-      <div v-if="Object.keys(archiveData).length === 0" class="empty-tip">
+      <div v-if="archiveData.length === 0" class="empty-tip">
         暂无文章
       </div>
     </div>
@@ -93,16 +84,16 @@ const archiveData = computed(() => {
     })
   })
 
-  const sortedGroups = {}
-  Object.keys(groups).sort((a, b) => b - a).forEach((key) => {
-    sortedGroups[key] = groups[key]
-  })
-
-  return sortedGroups
+  return Object.keys(groups)
+    .sort((a, b) => Number(b) - Number(a))
+    .map(year => ({
+      year,
+      articles: groups[year]
+    }))
 })
 
 const totalArticles = computed(() => articles.value.length)
-const yearCount = computed(() => Object.keys(archiveData.value).length)
+const yearCount = computed(() => archiveData.value.length)
 const expandedYears = ref(['2024'])
 
 const toggleYear = (year) => {
@@ -116,7 +107,7 @@ const toggleYear = (year) => {
 
 onMounted(() => {
   loadArticles().then(() => {
-    expandedYears.value = Object.keys(archiveData.value)
+    expandedYears.value = archiveData.value.map(item => item.year)
     updateSeo({
       title: '归档',
       description: `按时间轴浏览博客归档内容，当前收录 ${totalArticles.value} 篇文章，跨越 ${yearCount.value} 个年份。`,

@@ -104,11 +104,12 @@ const aboutContent = `# 关于我
   - Uvicorn
 
 - 其他
-  - 云服务：[林柚云](https://youvps.cn/)
-  - 图床：[敖武的图床](https://playground.z.wiki/img-cloud/index.html)（准备换为自建）
-  - 对象存储：[缤纷云](https://console.bitiful.com/)
+  - 云服务商：[优丰互联](https://www.disxcloud.com/)
+  - 图床：MoZhi's Storage System
+  - 对象存储：[七牛云](https://qiniu.com/)
+  - CDN：[EdgeOne](https://console.tencentcloud.com/)
   - SEO：[百度](http://ziyuan.baidu.com/)+[bing](https://www.bing.com/webmasters/about?setlang=zh-cn)
-  - 流量监控：[51la](https://v6.51.la/)+[umami](https://github.com/umami-software/umami)+[Uptime Kuma](https://github.com/louislam/uptime-kuma)
+  - 流量监控：[51la](https://v6.51.la/)+[Uptime Kuma](https://github.com/louislam/uptime-kuma)
   - 版权协议：使用[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)`
 
 const parseSections = (content) => {

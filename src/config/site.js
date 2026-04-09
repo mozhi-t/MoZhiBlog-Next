@@ -59,7 +59,7 @@ const DEFAULT_SITE_CONFIG = {
     intro: '',
     siteName: '',
     siteUrl: defaultSiteUrl,
-    avatar: '',
+    avatar: 'https://img-tc.mozhix.top/2026/03/30/69c95a8b5e267&tx.jpg',
     description: ''
   },
   footer: {

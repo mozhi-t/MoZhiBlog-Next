@@ -116,22 +116,24 @@
 
         <!-- Right Content - Article List -->
         <div class="articles-list">
-          <ArticleCard
-            v-for="article in articles"
-            :key="article.id"
-            :article="article"
-          />
+          <div v-if="loading" class="loading-state">
+            <div class="loading-spinner"></div>
+          </div>
 
-          <!-- Pagination -->
-          <Pagination
-            v-if="totalPages > 1"
-            :current-page="currentPage"
-            :total="total"
-            :page-size="pageSize"
-            :total-pages="totalPages"
-            @page-change="handlePageChange"
-            class="article-pagination"
-          />
+          <div v-else-if="articlesError" class="empty-state">
+            <p>获取数据失败，请稍后重试</p>
+          </div>
+
+          <div v-else-if="articles.length === 0" class="empty-state">
+            <p>暂无文章</p>
+          </div>
+
+          <template v-else>
+            <ArticleCard v-for="article in articles" :key="article.id" :article="article" :show-time="false" />
+
+            <!-- Pagination -->
+            <Pagination v-if="totalPages > 1" :current-page="currentPage" :total="total" :page-size="pageSize" :total-pages="totalPages" @page-change="handlePageChange" class="article-pagination" />
+          </template>
         </div>
       </div>
     </section>
@@ -253,6 +255,7 @@ const currentSubtitle = ref(subtitles[0])
 const isAnimating = ref(false)
 const showSubtitle = ref(true)
 const loading = ref(true)
+const articlesError = ref(false)
 const pageRootRef = ref(null)
 const hasEmittedPageReady = ref(false)
 let timer = null
@@ -294,8 +297,11 @@ watch(
 const loadArticles = async (page = 1) => {
   try {
     loading.value = true
+    articlesError.value = false
     const res = await articlesApi.list({ page, size: pageSize, merge_top: true })
-    articles.value = res.data.items.map(item => ({
+    const items = Array.isArray(res.data?.items) ? res.data.items : []
+
+    articles.value = items.map(item => ({
       id: item.id,
       title: item.title,
       excerpt: item.summary || '',
@@ -317,6 +323,10 @@ const loadArticles = async (page = 1) => {
     stats.value.articleCount = res.data.total || 0
   } catch (error) {
     console.error('加载文章失败:', error)
+    articles.value = []
+    total.value = 0
+    totalPages.value = 0
+    articlesError.value = true
   } finally {
     loading.value = false
   }
@@ -850,9 +860,36 @@ onUnmounted(() => {
   gap: var(--spacing-lg);
 }
 
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  padding: var(--spacing-2xl);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 /* Article Pagination */
 .article-pagination {
   margin-top: var(--spacing-xl);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive */
