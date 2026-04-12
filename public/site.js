@@ -40,7 +40,7 @@ window.__MOZHI_SITE_CONFIG__ = {
     path: ''
   },
   article: {
-    tipQrCode: '/tip-qr-code.png'
+    tipQrCode: '/tip-qr-code.jpg'
   },
   friendLink: {
     intro: '如果你想交换友链，可以在下方评论区留下你的友链信息，或者通过邮箱联系我，我看到后会尽快添加。',

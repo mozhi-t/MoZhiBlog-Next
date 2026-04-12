@@ -38,3 +38,4 @@ __screenshots__/
 # Vite
 *.timestamp-*-*.mjs
 /fuwari-main
+public/tip-qr-code.jpg

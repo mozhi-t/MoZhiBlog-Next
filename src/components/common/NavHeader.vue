@@ -136,6 +136,8 @@
         </div>
       </div>
     </nav>
+
+    <slot name="below-nav" :is-scrolled="isScrolled"></slot>
   </header>
 </template>
 
