@@ -1692,8 +1692,8 @@ const handleScroll = () => {
   left: 50%;
   bottom: calc(100% + 14px);
   z-index: 4;
-  width: fit-content;
-  max-width: min(72vw, 420px);
+  width: clamp(380px, 40vw, 520px);
+  max-width: calc(100vw - 16px);
   padding: 12px;
   border: 1px solid #e5e7eb;
   border-radius: 20px;
@@ -1728,10 +1728,9 @@ const handleScroll = () => {
 
 .tip-qr-image {
   display: block;
-  width: auto;
+  width: 100%;
   height: auto;
-  max-width: 100%;
-  max-height: min(60vh, 560px);
+  max-height: min(68vh, 560px);
   object-fit: contain;
   border-radius: 12px;
   background: #f3f4f6;
@@ -1876,7 +1875,7 @@ const handleScroll = () => {
   }
 
   .tip-popover {
-    width: 184px;
+    width: min(94vw, 420px);
     padding: 10px;
     border-radius: 18px;
   }
