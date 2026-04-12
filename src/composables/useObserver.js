@@ -1,6 +1,5 @@
 /**
- * useIntersectionObserver - 滚动可视区域检测
- * 使用Intersection Observer API实现元素进入可视区域时的动效
+ * Scroll / visibility observers.
  */
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 
@@ -16,16 +15,18 @@ export function useIntersectionObserver(options = {}, externalTargetRef = null) 
   }
 
   const startObserver = () => {
-    if (!targetRef.value) return
+    if (!targetRef.value || isVisible.value) return
 
-    // 如果已经可见，不再观察
-    if (isVisible.value) return
+    // Fallback for older mobile browsers and embedded webviews.
+    if (typeof window === 'undefined' || typeof window.IntersectionObserver !== 'function') {
+      isVisible.value = true
+      return
+    }
 
-    observer = new IntersectionObserver((entries) => {
+    observer = new window.IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           isVisible.value = true
-          // 只触发一次
           observer?.unobserve(entry.target)
         }
       })
@@ -54,10 +55,6 @@ export function useIntersectionObserver(options = {}, externalTargetRef = null) 
   }
 }
 
-/**
- * useScrollObserver - 监听滚动位置
- * 用于返回顶部按钮显示/隐藏等
- */
 export function useScrollObserver(threshold = 300) {
   const scrollY = ref(0)
   const isScrolled = ref(false)
@@ -76,7 +73,6 @@ export function useScrollObserver(threshold = 300) {
 
   onMounted(() => {
     window.addEventListener('scroll', handleScroll, { passive: true })
-    // 初始化
     scrollY.value = window.scrollY
     isScrolled.value = window.scrollY > threshold
   })
@@ -91,9 +87,6 @@ export function useScrollObserver(threshold = 300) {
   }
 }
 
-/**
- * useActiveAnchor - 目录锚点跟随滚动
- */
 export function useActiveAnchor(anchorIds = []) {
   const activeAnchor = ref('')
   let observer = null
@@ -102,7 +95,6 @@ export function useActiveAnchor(anchorIds = []) {
     if (anchorIds.length === 0) return
 
     const callback = (entries) => {
-      // 找到第一个在视口顶部的标题
       for (const entry of entries) {
         if (entry.isIntersecting) {
           activeAnchor.value = entry.target.id
@@ -111,7 +103,12 @@ export function useActiveAnchor(anchorIds = []) {
       }
     }
 
-    observer = new IntersectionObserver(callback, {
+    if (typeof window === 'undefined' || typeof window.IntersectionObserver !== 'function') {
+      activeAnchor.value = anchorIds[0] || ''
+      return
+    }
+
+    observer = new window.IntersectionObserver(callback, {
       rootMargin: '-80px 0px -60% 0px',
       threshold: 0
     })

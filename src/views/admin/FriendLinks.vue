@@ -48,7 +48,7 @@
         class="filter-btn"
         :class="{ active: filter.weight === 2 }"
         @click="filter.weight = 2; loadLinks()"
-      >来客</button>
+      >伙伴</button>
     </div>
 
     <!-- 友链列表 -->
@@ -143,7 +143,7 @@
             <select v-model="form.weight" class="form-input">
               <option :value="0">挚友</option>
               <option :value="1">朋友</option>
-              <option :value="2">来客</option>
+              <option :value="2">伙伴</option>
             </select>
           </div>
         </div>
@@ -189,9 +189,9 @@ const getWeightText = (weight) => {
   const weightMap = {
     0: '挚友',
     1: '朋友',
-    2: '来客'
+    2: '伙伴'
   }
-  return weightMap[weight] || '来客'
+  return weightMap[weight] || '伙伴'
 }
 
 const totalPages = computed(() => Math.ceil(total.value / size.value))

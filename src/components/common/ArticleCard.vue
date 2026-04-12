@@ -47,14 +47,14 @@
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              {{ formatDate(article.create_time, true) }}
+              {{ formatDate(article.create_time, props.showTime) }}
             </span>
             <span v-if="article.update_time && article.update_time !== article.create_time" class="date-item">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
               </svg>
-              {{ formatDate(article.update_time, true) }}
+              {{ formatDate(article.update_time, props.showTime) }}
             </span>
           </div>
 
@@ -86,6 +86,10 @@ const props = defineProps({
   highlightKeyword: {
     type: String,
     default: ''
+  },
+  showTime: {
+    type: Boolean,
+    default: true
   }
 })
 

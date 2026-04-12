@@ -45,14 +45,14 @@
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
-          发布于 {{ formatDate(article.date, true) }}
+          发布于 {{ formatDate(article.date) }}
         </span>
         <span class="stat-item" v-if="article.updateTime && article.updateTime !== article.date">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
           </svg>
-          更新于 {{ formatDate(article.updateTime, true) }}
+          更新于 {{ formatDate(article.updateTime) }}
         </span>
         <span class="stat-item">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -133,8 +133,8 @@
             <p class="license-title">{{ article.title }}</p>
             <div class="license-meta">
               <span>作者：MoZhi</span>
-              <span>发布于 {{ formatDate(article.date, true) }}</span>
-              <span>更新于 {{ formatDate(article.updateTime || article.date, true) }}</span>
+              <span>发布于 {{ formatDate(article.date) }}</span>
+              <span>更新于 {{ formatDate(article.updateTime || article.date) }}</span>
               <a
                 class="license-link"
                 :href="CC_LICENSE_URL"
@@ -1692,7 +1692,8 @@ const handleScroll = () => {
   left: 50%;
   bottom: calc(100% + 14px);
   z-index: 4;
-  width: 204px;
+  width: clamp(380px, 40vw, 520px);
+  max-width: calc(100vw - 16px);
   padding: 12px;
   border: 1px solid #e5e7eb;
   border-radius: 20px;
@@ -1728,8 +1729,9 @@ const handleScroll = () => {
 .tip-qr-image {
   display: block;
   width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
+  height: auto;
+  max-height: min(68vh, 560px);
+  object-fit: contain;
   border-radius: 12px;
   background: #f3f4f6;
 }
@@ -1873,7 +1875,7 @@ const handleScroll = () => {
   }
 
   .tip-popover {
-    width: 184px;
+    width: min(94vw, 420px);
     padding: 10px;
     border-radius: 18px;
   }

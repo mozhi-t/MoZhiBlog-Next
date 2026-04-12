@@ -1,45 +1,305 @@
 <script setup>
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 const props = defineProps({
   active: {
     type: Boolean,
     default: true
+  },
+  loadKey: {
+    type: String,
+    default: ''
+  },
+  scrolled: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['hidden'])
+const emit = defineEmits(['complete', 'hidden'])
 
-const dots = Array.from({ length: 7 }, (_, index) => index)
-const visible = ref(true)
-const isFinishing = ref(false)
+const visible = ref(false)
+const isOpen = ref(false)
+const progress = ref(0)
+
+let animationFrameId = null
 let finishTimer = null
-const FINISH_HIDE_DELAY = 680
+let openFrameId = null
+let measureTimer = null
+let completeTimer = null
+let startedAt = 0
+let loadRunId = 0
+let totalResources = 0
+let completedResources = 0
+let resourceTimeoutTimer = null
+const cleanupResourceListeners = []
+
+const FINISH_HIDE_DELAY = 1700
+const ENTER_DELAY = 180
+const MIN_PROGRESS = 6
+const CONTINUED_PROGRESS_CAP = 82
+const MIN_VISIBLE_DURATION = 1200
+const COMPLETE_HOLD_DURATION = 360
+const RESOURCE_TIMEOUT = 4500
+const RESOURCE_MEASURE_DELAY = 420
+
+const progressPercent = computed(() => `${Math.round(progress.value)}%`)
 
 const clearTimers = () => {
   if (finishTimer) {
-    clearTimeout(finishTimer)
+    window.clearTimeout(finishTimer)
     finishTimer = null
+  }
+
+  if (openFrameId) {
+    cancelAnimationFrame(openFrameId)
+    openFrameId = null
+  }
+
+  if (measureTimer) {
+    window.clearTimeout(measureTimer)
+    measureTimer = null
+  }
+
+  if (completeTimer) {
+    window.clearTimeout(completeTimer)
+    completeTimer = null
+  }
+
+  if (resourceTimeoutTimer) {
+    window.clearTimeout(resourceTimeoutTimer)
+    resourceTimeoutTimer = null
   }
 }
 
-const finishAndHide = () => {
-  clearTimers()
-  isFinishing.value = true
+const stopProgressLoop = () => {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId)
+    animationFrameId = null
+  }
+}
 
-  finishTimer = setTimeout(() => {
-    visible.value = false
-    isFinishing.value = false
+const clearResourceListeners = () => {
+  cleanupResourceListeners.splice(0).forEach((cleanup) => cleanup())
+}
+
+const markResourceDone = (runId) => {
+  if (runId !== loadRunId) {
+    return
+  }
+
+  completedResources += 1
+  updateProgressFromResources(runId)
+}
+
+const addResourceListener = (element, runId) => {
+  if (!element || element.dataset.loaderTracked === String(runId)) {
+    return
+  }
+
+  element.dataset.loaderTracked = String(runId)
+  totalResources += 1
+
+  if (isElementLoaded(element)) {
+    completedResources += 1
+    return
+  }
+
+  let settled = false
+  const settle = () => {
+    if (settled) {
+      return
+    }
+
+    settled = true
+    markResourceDone(runId)
+  }
+
+  element.addEventListener('load', settle, { once: true })
+  element.addEventListener('error', settle, { once: true })
+
+  cleanupResourceListeners.push(() => {
+    element.removeEventListener('load', settle)
+    element.removeEventListener('error', settle)
+  })
+}
+
+const isElementLoaded = (element) => {
+  const tagName = element.tagName?.toLowerCase()
+
+  if (tagName === 'img') {
+    return element.complete
+  }
+
+  if (tagName === 'link') {
+    try {
+      return Boolean(element.sheet)
+    } catch (error) {
+      return true
+    }
+  }
+
+  return true
+}
+
+const collectTrackableResources = (runId) => {
+  clearResourceListeners()
+  totalResources = 0
+  completedResources = 0
+  const currentPage = document.querySelector('.route-stage .route-page:last-child')
+  const scope = currentPage || document
+
+  scope.querySelectorAll('img').forEach((img) => {
+    const isLazyPending = img.loading === 'lazy' && !img.complete
+
+    if (!isLazyPending) {
+      addResourceListener(img, runId)
+    }
+  })
+
+  document.querySelectorAll('link[rel~="stylesheet"]').forEach((link) => {
+    addResourceListener(link, runId)
+  })
+
+  document.querySelectorAll('script[src]').forEach((script) => {
+    addResourceListener(script, runId)
+  })
+
+  if (document.fonts && document.fonts.status !== 'loaded') {
+    totalResources += 1
+    document.fonts.ready
+      .then(() => markResourceDone(runId))
+      .catch(() => markResourceDone(runId))
+  }
+
+  updateProgressFromResources(runId)
+}
+
+const updateProgressFromResources = (runId) => {
+  if (runId !== loadRunId) {
+    return
+  }
+
+  if (totalResources === 0) {
+    progress.value = 100
+    scheduleComplete(runId)
+    return
+  }
+
+  progress.value = Math.max(
+    MIN_PROGRESS,
+    Math.min(100, (completedResources / totalResources) * 100)
+  )
+
+  if (completedResources >= totalResources) {
+    scheduleComplete(runId)
+  }
+}
+
+const scheduleComplete = (runId) => {
+  if (runId !== loadRunId || completeTimer) {
+    return
+  }
+
+  const elapsed = performance.now() - startedAt
+  const delay = Math.max(0, MIN_VISIBLE_DURATION - elapsed) + COMPLETE_HOLD_DURATION
+
+  completeTimer = window.setTimeout(() => {
+    if (runId !== loadRunId) {
+      return
+    }
+
+    progress.value = 100
+    emit('complete')
+  }, delay)
+}
+
+const scheduleResourceTimeout = (runId) => {
+  resourceTimeoutTimer = window.setTimeout(() => {
+    if (runId !== loadRunId) {
+      return
+    }
+
+    completedResources = totalResources
+    updateProgressFromResources(runId)
+  }, RESOURCE_TIMEOUT)
+}
+
+const measurePageResources = (runId) => {
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      measureTimer = window.setTimeout(() => {
+        measureTimer = null
+
+        if (runId !== loadRunId) {
+          return
+        }
+
+        collectTrackableResources(runId)
+        scheduleResourceTimeout(runId)
+      }, RESOURCE_MEASURE_DELAY)
+    })
+  })
+}
+
+const startLoading = () => {
+  loadRunId += 1
+  const runId = loadRunId
+  const wasVisible = visible.value
+  const continuedProgress = Math.min(
+    Math.max(progress.value, MIN_PROGRESS),
+    CONTINUED_PROGRESS_CAP
+  )
+
+  clearTimers()
+  stopProgressLoop()
+  clearResourceListeners()
+  visible.value = true
+  isOpen.value = wasVisible ? true : false
+  progress.value = wasVisible ? continuedProgress : MIN_PROGRESS
+  startedAt = performance.now()
+  totalResources = 0
+  completedResources = 0
+
+  if (!wasVisible) {
+    openFrameId = requestAnimationFrame(() => {
+      openFrameId = requestAnimationFrame(() => {
+        openFrameId = null
+        isOpen.value = true
+      })
+    })
+  }
+
+  measurePageResources(runId)
+}
+
+const finishAndHide = () => {
+  loadRunId += 1
+  clearTimers()
+  stopProgressLoop()
+  clearResourceListeners()
+
+  if (!visible.value) {
     emit('hidden')
-  }, FINISH_HIDE_DELAY)
+    return
+  }
+
+  progress.value = 100
+  isOpen.value = false
+
+  finishTimer = window.setTimeout(() => {
+    visible.value = false
+    isOpen.value = false
+    progress.value = 0
+    emit('hidden')
+  }, FINISH_HIDE_DELAY + ENTER_DELAY)
 }
 
 watch(
-  () => props.active,
-  (isActive) => {
+  () => [props.active, props.loadKey],
+  ([isActive]) => {
     if (isActive) {
-      visible.value = true
-      isFinishing.value = false
+      startLoading()
       return
     }
 
@@ -50,30 +310,24 @@ watch(
 
 onBeforeUnmount(() => {
   clearTimers()
+  stopProgressLoop()
 })
 </script>
 
 <template>
-  <Transition name="initial-loader-fade">
+  <Transition name="initial-loader-pop" appear>
     <div
       v-if="visible"
       class="initial-loader"
-      :class="{ 'is-finishing': isFinishing }"
-      aria-live="polite"
-      aria-label="Loading"
+      :class="{ 'is-open': isOpen, scrolled }"
+      role="progressbar"
+      aria-label="页面资源加载进度"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      :aria-valuenow="Math.round(progress)"
     >
-      <div class="initial-loader__inner">
-        <div class="initial-loader__label" aria-hidden="true">loading</div>
-
-        <div class="initial-loader__text" role="status">
-          <span
-            v-for="index in dots"
-            :key="index"
-            class="initial-loader__dot"
-            :style="{ animationDelay: `${index * 0.09}s` }"
-          />
-        </div>
-
+      <div class="initial-loader__track">
+        <div class="initial-loader__bar" :style="{ width: progressPercent }"></div>
       </div>
     </div>
   </Transition>
@@ -81,147 +335,122 @@ onBeforeUnmount(() => {
 
 <style lang="scss" scoped>
 .initial-loader {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  z-index: -1;
+  width: clamp(104px, 12vw, 156px);
+  height: 18px;
+  padding: 3px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-nav);
+  background: var(--glass-bg);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  pointer-events: none;
+  transform-origin: 50% -18px;
+  transform: translateX(-50%);
+  overflow: hidden;
+  will-change: transform, opacity, filter;
+}
+
+.initial-loader__track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.initial-loader__bar {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
   background:
-    radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.72), rgba(245, 245, 247, 0.96) 42%, #eef0f3 100%);
-  backdrop-filter: blur(10px) saturate(110%);
+    linear-gradient(
+      90deg,
+      rgba(108, 108, 112, 0.7),
+      rgba(150, 150, 156, 0.92)
+    );
+  box-shadow:
+    0 0 14px rgba(82, 82, 88, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+  transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.initial-loader {
   transition:
-    opacity 0.58s cubic-bezier(0.22, 1, 0.36, 1),
-    background 0.68s cubic-bezier(0.22, 1, 0.36, 1),
-    backdrop-filter 0.68s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 1.55s cubic-bezier(0.19, 1, 0.22, 1),
+    transform 1.55s cubic-bezier(0.19, 1, 0.22, 1),
+    filter 1.55s cubic-bezier(0.19, 1, 0.22, 1),
+    box-shadow 1.55s cubic-bezier(0.19, 1, 0.22, 1),
+    top 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+    width 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+    height 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+    padding 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+  opacity: 0;
+  filter: blur(18px) saturate(0.92);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transform: translate(-50%, -42px) scale(0.32, 0.42);
+}
+
+.initial-loader.scrolled {
+  top: calc(100% + 8px);
+  width: clamp(88px, 10vw, 132px);
+  height: 15px;
+  padding: 2.5px;
+  transform-origin: 50% -14px;
+}
+
+.initial-loader.is-open {
+  opacity: 1;
+  filter: blur(0) saturate(1);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  transform: translate(-50%, 0) scale(1);
 }
 
 [data-theme="dark"] .initial-loader {
-  background:
-    radial-gradient(circle at 50% 16%, rgba(78, 78, 82, 0.26), rgba(22, 22, 24, 0.96) 42%, #070707 100%);
-}
-
-.initial-loader__inner {
-  width: min(300px, 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  transition:
-    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.initial-loader__label {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "PingFang SC", sans-serif;
-  font-size: clamp(18px, 3.2vw, 22px);
-  font-weight: 400;
-  letter-spacing: 0.11em;
-  text-transform: lowercase;
-  color: rgba(29, 29, 31, 0.72);
-  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.38);
-}
-
-[data-theme="dark"] .initial-loader__label {
-  color: rgba(255, 255, 255, 0.76);
-  text-shadow: none;
-}
-
-.initial-loader__text {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 16px;
-}
-
-.initial-loader__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(29, 29, 31, 0.38);
   box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.44),
-    0 1px 2px rgba(0, 0, 0, 0.08);
-  animation: loaderBounce 1.45s cubic-bezier(0.33, 0.72, 0.12, 1) infinite;
+    0 8px 24px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-[data-theme="dark"] .initial-loader__dot {
-  background: rgba(255, 255, 255, 0.52);
+[data-theme="dark"] .initial-loader__track {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .initial-loader__bar {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(150, 150, 156, 0.62),
+      rgba(214, 214, 220, 0.88)
+    );
   box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.08),
-    0 1px 2px rgba(0, 0, 0, 0.22);
+    0 0 16px rgba(190, 190, 196, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.initial-loader.is-finishing .initial-loader__inner {
-  opacity: 0;
-  filter: blur(14px);
-  transform: scale(1.045);
-}
-
-.initial-loader.is-finishing .initial-loader__dot {
-  animation-play-state: paused;
-}
-
-.initial-loader.is-finishing {
-  pointer-events: none;
-  opacity: 0;
-  background:
-    radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0), rgba(245, 245, 247, 0.1) 42%, rgba(238, 240, 243, 0) 100%);
-  backdrop-filter: blur(0px) saturate(100%);
-}
-
-[data-theme="dark"] .initial-loader.is-finishing {
-  background:
-    radial-gradient(circle at 50% 16%, rgba(78, 78, 82, 0), rgba(22, 22, 24, 0.08) 42%, rgba(7, 7, 7, 0) 100%);
-}
-
-.initial-loader-fade-enter-active,
-.initial-loader-fade-leave-active {
-  transition:
-    opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 0.42s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.initial-loader-fade-enter-from,
-.initial-loader-fade-leave-to {
-  opacity: 0;
-}
-
-@keyframes loaderBounce {
-  0%, 100% {
-    transform: translateY(0) scale(1);
-    opacity: 0.42;
-  }
-  15% {
-    transform: translateY(-3px) scale(1.12);
-    opacity: 0.9;
-  }
-  30% {
-    transform: translateY(0) scale(1);
-    opacity: 0.55;
-  }
-}
-
-@media (max-width: 640px) {
-  .initial-loader__inner {
-    gap: 16px;
+@media (max-width: 768px) {
+  .initial-loader {
+    top: calc(100% + 8px);
+    width: 118px;
+    height: 16px;
   }
 
-  .initial-loader__label {
-    font-size: 18px;
+  .initial-loader.scrolled {
+    top: calc(100% + 7px);
+    width: 100px;
+    height: 14px;
+    padding: 2px;
   }
-
-  .initial-loader__text {
-    gap: 8px;
-  }
-
-  .initial-loader__dot {
-    width: 5px;
-    height: 5px;
-  }
-
 }
 </style>

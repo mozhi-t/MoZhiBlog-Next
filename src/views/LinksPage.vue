@@ -57,7 +57,7 @@
       </div>
 
       <div v-if="visitors.length > 0" class="link-section">
-        <h2 class="section-title">来客</h2>
+        <h2 class="section-title">伙伴</h2>
         <div class="links-grid">
           <a
             v-for="(link, index) in visitors"
