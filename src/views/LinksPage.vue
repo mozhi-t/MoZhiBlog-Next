@@ -20,7 +20,7 @@
             target="_blank"
             rel="noopener"
             class="link-card best-friend"
-            :style="{ animationDelay: `${index * 0.1}s` }"
+            :style="getCardAnimationStyle(index)"
           >
             <div class="link-avatar">
               <img :src="link.avatar" :alt="link.name" />
@@ -43,7 +43,7 @@
             target="_blank"
             rel="noopener"
             class="link-card"
-            :style="{ animationDelay: `${index * 0.1}s` }"
+            :style="getCardAnimationStyle(index)"
           >
             <div class="link-avatar">
               <img :src="link.avatar" :alt="link.name" />
@@ -66,7 +66,7 @@
             target="_blank"
             rel="noopener"
             class="link-card"
-            :style="{ animationDelay: `${index * 0.1}s` }"
+            :style="getCardAnimationStyle(index)"
           >
             <div class="link-avatar">
               <img :src="link.avatar" :alt="link.name" />
@@ -112,7 +112,7 @@ descr: {{ SITE_CONFIG.friendLink.description }}</pre>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { friendLinksApi } from '../api/frontend'
 import { SITE_CONFIG } from '../config/site'
 import { TWIKOO_CONFIG, TWIKOO_ENV_ID } from '../config/twikoo'
@@ -120,6 +120,21 @@ import { updateSeo } from '../utils/seo'
 
 const loading = ref(true)
 const links = ref([])
+const gridColumnCount = ref(1)
+
+const updateGridColumnCount = () => {
+  if (window.innerWidth <= 768) {
+    gridColumnCount.value = 1
+  } else if (window.innerWidth <= 1100) {
+    gridColumnCount.value = 2
+  } else {
+    gridColumnCount.value = 4
+  }
+}
+
+const getCardAnimationStyle = index => ({
+  animationDelay: `${Math.floor(index / gridColumnCount.value) * 0.04}s`
+})
 
 const bestFriends = computed(() =>
   links.value.filter(link => link.weight === 0).map(item => ({
@@ -204,6 +219,8 @@ const initTwikooInstance = () => {
 }
 
 onMounted(() => {
+  updateGridColumnCount()
+  window.addEventListener('resize', updateGridColumnCount)
   updateSeo({
     title: '友链',
     description: `浏览 ${SITE_CONFIG.name} 的友链页面，发现值得访问的博客与站点，并支持留言申请互链。`,
@@ -212,6 +229,10 @@ onMounted(() => {
   })
   loadLinks()
   initTwikoo()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateGridColumnCount)
 })
 </script>
 
@@ -241,7 +262,7 @@ onMounted(() => {
 
 .links-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-3xl);
 }
@@ -251,14 +272,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  padding: var(--spacing-lg);
+  height: 124px;
+  padding: 20px;
   background: var(--color-bg-secondary);
   border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   text-decoration: none;
   transition: all var(--transition-smooth);
-  animation: cardFadeIn 0.4s ease forwards;
+  animation: cardFadeIn 0.28s ease forwards;
   opacity: 0;
 
   &:hover {
@@ -288,8 +310,8 @@ onMounted(() => {
 
 .link-avatar {
   flex-shrink: 0;
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-full);
   overflow: hidden;
   background: var(--color-bg-tertiary);
@@ -304,22 +326,40 @@ onMounted(() => {
 .link-info {
   flex: 1;
   min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .link-name {
-  font-size: var(--font-size-base);
+  font-size: 17px;
   font-weight: 600;
+  line-height: var(--line-height-tight);
   color: var(--color-text-primary);
   margin-bottom: 4px;
+  max-width: 100%;
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   transition: color var(--transition-base);
 }
 
 .link-desc {
-  font-size: var(--font-size-sm);
+  font-size: 15px;
+  line-height: var(--line-height-tight);
   color: var(--color-text-secondary);
-  white-space: nowrap;
+  margin: 0;
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .contact-section {
@@ -384,9 +424,25 @@ onMounted(() => {
   min-height: 200px;
 }
 
+@media (max-width: 1100px) {
+  .links-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .links-grid {
     grid-template-columns: 1fr;
+  }
+
+  .link-card {
+    height: 116px;
+    padding: var(--spacing-lg);
+  }
+
+  .link-avatar {
+    width: 52px;
+    height: 52px;
   }
 }
 
