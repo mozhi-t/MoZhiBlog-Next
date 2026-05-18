@@ -21,12 +21,14 @@ const emit = defineEmits(['complete', 'hidden'])
 const visible = ref(false)
 const isOpen = ref(false)
 const progress = ref(0)
+const hasTimedOut = ref(false)
 
 let animationFrameId = null
 let finishTimer = null
 let openFrameId = null
 let measureTimer = null
 let completeTimer = null
+let timeoutRetreatTimer = null
 let startedAt = 0
 let loadRunId = 0
 let totalResources = 0
@@ -37,13 +39,17 @@ const cleanupResourceListeners = []
 const FINISH_HIDE_DELAY = 1700
 const ENTER_DELAY = 180
 const MIN_PROGRESS = 6
-const CONTINUED_PROGRESS_CAP = 82
+const CONTINUED_PROGRESS_CAP = 50
 const MIN_VISIBLE_DURATION = 1200
 const COMPLETE_HOLD_DURATION = 360
-const RESOURCE_TIMEOUT = 4500
+const RESOURCE_TIMEOUT = 60000
+const TIMEOUT_HOLD_DURATION = 4000
 const RESOURCE_MEASURE_DELAY = 420
 
 const progressPercent = computed(() => `${Math.round(progress.value)}%`)
+const loaderLabel = computed(() => (
+  hasTimedOut.value ? '页面资源获取超时' : '页面资源加载进度'
+))
 
 const clearTimers = () => {
   if (finishTimer) {
@@ -66,6 +72,11 @@ const clearTimers = () => {
     completeTimer = null
   }
 
+  if (timeoutRetreatTimer) {
+    window.clearTimeout(timeoutRetreatTimer)
+    timeoutRetreatTimer = null
+  }
+
   if (resourceTimeoutTimer) {
     window.clearTimeout(resourceTimeoutTimer)
     resourceTimeoutTimer = null
@@ -84,7 +95,7 @@ const clearResourceListeners = () => {
 }
 
 const markResourceDone = (runId) => {
-  if (runId !== loadRunId) {
+  if (runId !== loadRunId || hasTimedOut.value) {
     return
   }
 
@@ -176,7 +187,7 @@ const collectTrackableResources = (runId) => {
 }
 
 const updateProgressFromResources = (runId) => {
-  if (runId !== loadRunId) {
+  if (runId !== loadRunId || hasTimedOut.value) {
     return
   }
 
@@ -197,7 +208,7 @@ const updateProgressFromResources = (runId) => {
 }
 
 const scheduleComplete = (runId) => {
-  if (runId !== loadRunId || completeTimer) {
+  if (runId !== loadRunId || hasTimedOut.value || completeTimer) {
     return
   }
 
@@ -216,12 +227,26 @@ const scheduleComplete = (runId) => {
 
 const scheduleResourceTimeout = (runId) => {
   resourceTimeoutTimer = window.setTimeout(() => {
-    if (runId !== loadRunId) {
+    resourceTimeoutTimer = null
+
+    if (runId !== loadRunId || hasTimedOut.value) {
       return
     }
 
-    completedResources = totalResources
-    updateProgressFromResources(runId)
+    if (totalResources === 0 || completedResources >= totalResources) {
+      return
+    }
+
+    hasTimedOut.value = true
+    clearResourceListeners()
+
+    timeoutRetreatTimer = window.setTimeout(() => {
+      if (runId !== loadRunId) {
+        return
+      }
+
+      emit('complete')
+    }, TIMEOUT_HOLD_DURATION)
   }, RESOURCE_TIMEOUT)
 }
 
@@ -256,6 +281,7 @@ const startLoading = () => {
   clearResourceListeners()
   visible.value = true
   isOpen.value = wasVisible ? true : false
+  hasTimedOut.value = false
   progress.value = wasVisible ? continuedProgress : MIN_PROGRESS
   startedAt = performance.now()
   totalResources = 0
@@ -291,6 +317,7 @@ const finishAndHide = () => {
     visible.value = false
     isOpen.value = false
     progress.value = 0
+    hasTimedOut.value = false
     emit('hidden')
   }, FINISH_HIDE_DELAY + ENTER_DELAY)
 }
@@ -319,16 +346,21 @@ onBeforeUnmount(() => {
     <div
       v-if="visible"
       class="initial-loader"
-      :class="{ 'is-open': isOpen, scrolled }"
+      :class="{ 'is-open': isOpen, 'is-timeout': hasTimedOut, scrolled }"
       role="progressbar"
-      aria-label="页面资源加载进度"
+      :aria-label="loaderLabel"
       aria-valuemin="0"
       aria-valuemax="100"
       :aria-valuenow="Math.round(progress)"
     >
-      <div class="initial-loader__track">
-        <div class="initial-loader__bar" :style="{ width: progressPercent }"></div>
-      </div>
+      <Transition name="initial-loader-content" mode="out-in">
+        <div v-if="hasTimedOut" key="timeout" class="initial-loader__timeout">
+          页面资源获取超时
+        </div>
+        <div v-else key="progress" class="initial-loader__track">
+          <div class="initial-loader__bar" :style="{ width: progressPercent }"></div>
+        </div>
+      </Transition>
     </div>
   </Transition>
 </template>
@@ -382,6 +414,37 @@ onBeforeUnmount(() => {
   transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.initial-loader__timeout {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #8e8e93;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.initial-loader-content-enter-active,
+.initial-loader-content-leave-active {
+  transition:
+    opacity 0.52s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.52s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.initial-loader-content-enter-from,
+.initial-loader-content-leave-to {
+  opacity: 0;
+  filter: blur(14px);
+}
+
+.initial-loader-content-enter-to,
+.initial-loader-content-leave-from {
+  opacity: 1;
+  filter: blur(0);
+}
+
 .initial-loader {
   transition:
     opacity 1.55s cubic-bezier(0.19, 1, 0.22, 1),
@@ -389,9 +452,10 @@ onBeforeUnmount(() => {
     filter 1.55s cubic-bezier(0.19, 1, 0.22, 1),
     box-shadow 1.55s cubic-bezier(0.19, 1, 0.22, 1),
     top 0.4s cubic-bezier(0.19, 1, 0.22, 1),
-    width 0.4s cubic-bezier(0.19, 1, 0.22, 1),
-    height 0.4s cubic-bezier(0.19, 1, 0.22, 1),
-    padding 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+    width 0.56s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.56s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.56s cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 0.56s cubic-bezier(0.16, 1, 0.3, 1);
   opacity: 0;
   filter: blur(18px) saturate(0.92);
   box-shadow:
@@ -408,6 +472,20 @@ onBeforeUnmount(() => {
   transform-origin: 50% -14px;
 }
 
+.initial-loader.is-timeout {
+  width: 216px;
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 22px;
+}
+
+.initial-loader.scrolled.is-timeout {
+  width: 204px;
+  height: 40px;
+  padding: 0 22px;
+  border-radius: 20px;
+}
+
 .initial-loader.is-open {
   opacity: 1;
   filter: blur(0) saturate(1);
@@ -415,6 +493,16 @@ onBeforeUnmount(() => {
     0 10px 28px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.38);
   transform: translate(-50%, 0) scale(1);
+}
+
+.initial-loader.is-open.is-timeout {
+  animation: initial-loader-timeout-bounce 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes initial-loader-timeout-bounce {
+  0% { transform: translate(-50%, 0) scale(0.94, 0.86); }
+  58% { transform: translate(-50%, 0) scale(1.018, 1.032); }
+  100% { transform: translate(-50%, 0) scale(1); }
 }
 
 [data-theme="dark"] .initial-loader {
@@ -451,6 +539,14 @@ onBeforeUnmount(() => {
     width: 100px;
     height: 14px;
     padding: 2px;
+  }
+
+  .initial-loader.is-timeout,
+  .initial-loader.scrolled.is-timeout {
+    width: 192px;
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 19px;
   }
 }
 </style>

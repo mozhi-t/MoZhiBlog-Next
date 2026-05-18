@@ -39,3 +39,7 @@ __screenshots__/
 *.timestamp-*-*.mjs
 /fuwari-main
 public/tip-qr-code.jpg
+AGENTS.md
+
+# Other
+/.claude
