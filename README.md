@@ -270,25 +270,6 @@ VITE_TWIKOO_ENV_ID=https://twikoo-api.mozhix.top/
 7. 在正文区域直接编写 Markdown
 8. 保存后文章写入数据库并在前台展示
 
-如果你想先在本地准备文章内容，再复制进后台编辑器，可以使用 [docs/blog-post-template.md](docs/blog-post-template.md)。
-
-## Markdown 支持说明
-
-文章编辑器支持 Markdown，前端会对正文进行渲染，并增强代码块显示。适合编写：
-
-- 技术教程
-- 学习笔记
-- 项目复盘
-- 生活随笔
-
-建议正文至少包含：
-
-- 一级标题
-- 导语
-- 2 到 4 个二级标题
-- 代码块或列表
-- 总结
-
 ## 常用接口
 
 ### 后台鉴权
@@ -390,10 +371,3 @@ uvicorn main:app --host 0.0.0.0 --port 8008
 - 评论管理后台
 - RSS 自动生成
 - Docker 化部署
-- 自动化测试
-- CI/CD 发布流程
-
-## 文档补充
-
-- 项目总说明：当前文件 `README.md`
-- 博客发布模板：[docs/blog-post-template.md](docs/blog-post-template.md)
