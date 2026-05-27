@@ -81,6 +81,11 @@ const router = createRouter({
   history: createWebHistory(),
   routes: allRoutes,
   scrollBehavior(to, from, savedPosition) {
+    // 后台管理页面不自动滚动
+    if (to.path.startsWith('/admin')) {
+      return false
+    }
+
     if (savedPosition) {
       return savedPosition
     }

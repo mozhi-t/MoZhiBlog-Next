@@ -87,8 +87,8 @@ onUnmounted(() => {
     <main class="main-content" :class="{ 'no-header': isAdminPage }">
       <div class="route-stage">
         <router-view v-slot="{ Component }">
-          <Transition name="page-fade" appear>
-            <component :is="Component" :key="route.fullPath" class="route-page" />
+          <Transition :name="isAdminPage ? '' : 'page-fade'" appear>
+            <component :is="Component" :key="isAdminPage ? undefined : route.fullPath" class="route-page" />
           </Transition>
         </router-view>
       </div>
